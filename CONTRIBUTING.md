@@ -27,8 +27,7 @@ does not block the PR.
 
 Keep feedback actionable. If a comment asks for a different design, name the
 constraint the current design violates or the case it fails to support.
-Use specific, actionable feedback rather than vague reactions such as "looks
-weird".
+Reviewers should leave specific, actionable feedback rather than vague reactions such as "looks weird".
 
 ## Agent response etiquette
 
