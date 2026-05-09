@@ -14,8 +14,6 @@ import (
 func TestSendChatMessage(t *testing.T) {
 	t.Parallel()
 
-	handle := "@alice"
-
 	tests := []struct {
 		name          string
 		chatID        string
@@ -37,7 +35,7 @@ func TestSendChatMessage(t *testing.T) {
 				},
 				Mentions: []client.Mention{{
 					ID:     "user_1",
-					Handle: &handle,
+					Handle: "@alice",
 				}},
 			},
 			responseCode: http.StatusOK,

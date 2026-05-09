@@ -10,10 +10,10 @@ import (
 
 // Mention describes a user mention in a chat message.
 type Mention struct {
-	ID       string  `json:"id"`
-	Handle   *string `json:"handle,omitempty"`
-	Name     *string `json:"name,omitempty"`
-	Username *string `json:"username,omitempty"`
+	ID       string `json:"id"`
+	Handle   string `json:"handle,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Username string `json:"username,omitempty"`
 }
 
 // ChatMessage describes a chat message returned by the platform.
