@@ -17,6 +17,7 @@ func TestListChatRooms(t *testing.T) {
 	tests := []struct {
 		name          string
 		apiKey        string
+		options       *client.ListChatRoomsOptions
 		responseCode  int
 		responseBody  string
 		assertRequest func(*testing.T, *http.Request)
@@ -95,6 +96,29 @@ func TestListChatRooms(t *testing.T) {
 				}
 				if out.Metadata.TotalPages == nil || *out.Metadata.TotalPages != 1 {
 					t.Fatalf("metadata.total_pages = %#v", out.Metadata.TotalPages)
+				}
+			},
+			wantCalled: true,
+		},
+		{
+			name:    "encodes pagination query params",
+			apiKey:  "test-key",
+			options: &client.ListChatRoomsOptions{Page: intPtr(2), PageSize: intPtr(10)},
+			responseCode: http.StatusOK,
+			responseBody: `{"data":[],"metadata":{"page":2,"page_size":10,"total_count":0,"total_pages":0}}`,
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+				if req.URL.String() != "https://api.test/api/v1/agent/chats?page=2&page_size=10" {
+					t.Fatalf("url = %s", req.URL.String())
+				}
+			},
+			assertResult: func(t *testing.T, out *client.ListChatRoomsResponse, err error) {
+				t.Helper()
+				if err != nil {
+					t.Fatalf("ListChatRoomsWithOptions returned error: %v", err)
+				}
+				if out == nil {
+					t.Fatal("ListChatRoomsWithOptions returned nil response")
 				}
 			},
 			wantCalled: true,
@@ -193,7 +217,13 @@ func TestListChatRooms(t *testing.T) {
 				client.WithHTTPClient(&http.Client{Transport: transport}),
 			)
 
-			out, err := sdk.ListChatRooms(context.Background())
+			var out *client.ListChatRoomsResponse
+			var err error
+			if tt.options == nil {
+				out, err = sdk.ListChatRooms(context.Background())
+			} else {
+				out, err = sdk.ListChatRoomsWithOptions(context.Background(), tt.options)
+			}
 			if tt.assertResult != nil {
 				tt.assertResult(t, out, err)
 			}
@@ -202,4 +232,8 @@ func TestListChatRooms(t *testing.T) {
 			}
 		})
 	}
+}
+
+func intPtr(v int) *int {
+	return &v
 }

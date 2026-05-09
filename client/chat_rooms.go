@@ -3,6 +3,8 @@ package client
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -29,10 +31,35 @@ type ListChatRoomsResponse struct {
 	Metadata ChatRoomsMetadata `json:"metadata"`
 }
 
+// ListChatRoomsOptions controls pagination for chat room listing.
+type ListChatRoomsOptions struct {
+	Page     *int
+	PageSize *int
+}
+
 // ListChatRooms fetches chat rooms available to the authenticated agent.
 func (client *Client) ListChatRooms(ctx context.Context) (*ListChatRoomsResponse, error) {
+	return client.ListChatRoomsWithOptions(ctx, nil)
+}
+
+// ListChatRoomsWithOptions fetches chat rooms with optional pagination params.
+func (client *Client) ListChatRoomsWithOptions(ctx context.Context, opts *ListChatRoomsOptions) (*ListChatRoomsResponse, error) {
+	path := "/api/v1/agent/chats"
+	if opts != nil {
+		query := url.Values{}
+		if opts.Page != nil {
+			query.Set("page", strconv.Itoa(*opts.Page))
+		}
+		if opts.PageSize != nil {
+			query.Set("page_size", strconv.Itoa(*opts.PageSize))
+		}
+		if encoded := query.Encode(); encoded != "" {
+			path += "?" + encoded
+		}
+	}
+
 	var out ListChatRoomsResponse
-	if err := client.Do(ctx, http.MethodGet, "/api/v1/agent/chats", nil, &out); err != nil {
+	if err := client.Do(ctx, http.MethodGet, path, nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
