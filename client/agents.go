@@ -12,16 +12,11 @@ type AgentIdentity struct {
 	Description *string `json:"description"`
 }
 
-// GetAgent fetches the current authenticated agent identity.
-func (client *Client) GetAgent(ctx context.Context) (*AgentIdentity, error) {
+// GetAgentMe fetches the current authenticated agent identity.
+func (client *Client) GetAgentMe(ctx context.Context) (*AgentIdentity, error) {
 	var out AgentIdentity
 	if err := client.Do(ctx, http.MethodGet, "/v1/agents/me", nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
-}
-
-// GetAgentMe fetches the current authenticated agent identity.
-func (client *Client) GetAgentMe(ctx context.Context) (*AgentIdentity, error) {
-	return client.GetAgent(ctx)
 }

@@ -33,7 +33,7 @@ func TestGetChatRoom(t *testing.T) {
 				if req.Method != http.MethodGet {
 					t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
 				}
-				if req.URL.String() != "https://api.test/v1/chats/chat_123" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats/chat_123" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
@@ -97,7 +97,7 @@ func TestGetChatRoom(t *testing.T) {
 			responseBody: `{"data":{"id":"a/b","inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-02T03:06:05Z"}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
-				if req.URL.String() != "https://api.test/v1/chats/a%2Fb" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats/a%2Fb" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 			},

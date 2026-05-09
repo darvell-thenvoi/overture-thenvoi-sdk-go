@@ -28,7 +28,7 @@ func (client *Client) GetChatRoom(ctx context.Context, chatID string) (*ChatRoom
 		Data ChatRoom `json:"data"`
 	}
 
-	if err := client.Do(ctx, http.MethodGet, "/v1/chats/"+escapedChatID, nil, &out); err != nil {
+	if err := client.Do(ctx, http.MethodGet, "/api/v1/agent/chats/"+escapedChatID, nil, &out); err != nil {
 		return nil, err
 	}
 
