@@ -19,7 +19,7 @@ func TestContactV2Endpoints(t *testing.T) {
 		seen = append(seen, req.Method+" "+req.URL.String())
 		switch req.URL.EscapedPath() {
 		case "/api/v2/agents/me/contacts/contact%2F1":
-			return jsonResponse(http.StatusOK, `{"data":{"id":"contact/1","name":"Ada","type":"agent","description":"Analyst","email":null,"avatar_url":null,"can_add_to_chats":true,"can_execute_requests":true,"status":{"connection":"online","last_seen":"2026-01-02T03:04:05Z"},"workload":{"active":1},"capabilities":["research"],"metadata":{"tier":"gold"},"relationship":{"added_at":"2026-01-01T03:04:05Z","interaction_count":7,"permissions":{"can_add_to_chats":true,"can_remove_from_chats":true,"can_execute_requests":true,"can_view_performance":false}},"created_at":"2026-01-01T03:04:05Z","performance_stats":{"success_rate":0.98}}}`), nil
+			return jsonResponse(http.StatusOK, `{"data":{"id":"contact/1","name":"Ada","type":"agent","description":"Analyst","email":null,"avatar_url":null,"can_add_to_chats":true,"can_execute_requests":true,"status":{"connection":"online","availability":"available","last_seen":"2026-01-02T03:04:05Z","status_message":"ready"},"workload":{"active":1},"capabilities":["research"],"metadata":{"tier":"gold"},"relationship":{"added_at":"2026-01-01T03:04:05Z","interaction_count":7,"last_interaction":"2026-01-02T03:04:05Z","tags":["trusted"],"permissions":{"can_add_to_chats":true,"can_remove_from_chats":true,"can_execute_requests":true,"can_view_performance":false}},"created_at":"2026-01-01T03:04:05Z","performance_stats":{"success_rate":0.98}}}`), nil
 		case "/api/v2/agents/me/contacts/search":
 			assertJSONField(t, req, "query", "ada")
 			return jsonResponse(http.StatusOK, `{"data":[{"id":"contact_1","name":"Ada","type":"agent","description":null,"email":null,"avatar_url":null,"can_add_to_chats":true,"can_execute_requests":true,"status":{"connection":"online","last_seen":null},"workload":null,"capabilities":["research"],"metadata":null,"relationship":{"added_at":"2026-01-01T03:04:05Z","interaction_count":7}}],"pagination":{"page":2,"per_page":25,"total_pages":1,"total_items":1}}`), nil
@@ -41,7 +41,7 @@ func TestContactV2Endpoints(t *testing.T) {
 	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
 
 	detail, err := sdk.GetContactDetails(context.Background(), "contact/1")
-	if err != nil || detail.ID != "contact/1" || detail.Relationship.Permissions == nil || !detail.Relationship.Permissions.CanExecuteRequests {
+	if err != nil || detail.ID != "contact/1" || detail.Status.StatusMessage == nil || *detail.Status.StatusMessage != "ready" || detail.Relationship.Permissions == nil || !detail.Relationship.Permissions.CanExecuteRequests || detail.Relationship.LastInteraction == nil || len(detail.Relationship.Tags) != 1 {
 		t.Fatalf("GetContactDetails out=%#v err=%v", detail, err)
 	}
 	search, err := sdk.SearchContacts(context.Background(), client.SearchContactsInput{Query: "ada", Filters: &client.ContactSearchFilters{Types: []string{"agent"}, Capabilities: &client.ContactCapabilityFilter{Required: []string{"research"}}}, Page: &page, PerPage: &perPage})

@@ -226,16 +226,18 @@ type Contact struct {
 
 // ContactStatus describes contact connection and availability state.
 type ContactStatus struct {
-	Connection   string  `json:"connection"`
-	LastSeen     *string `json:"last_seen,omitempty"`
-	Availability *string `json:"availability,omitempty"`
+	Connection    string    `json:"connection"`
+	Availability  *string   `json:"availability"`
+	LastSeen      time.Time `json:"last_seen"`
+	StatusMessage *string   `json:"status_message"`
 }
 
 // ContactRelationship describes a contact relationship.
 type ContactRelationship struct {
-	AddedAt          *time.Time          `json:"added_at,omitempty"`
-	InteractionCount int                 `json:"interaction_count,omitempty"`
-	Permissions      *ContactPermissions `json:"permissions,omitempty"`
+	AddedAt          time.Time  `json:"added_at"`
+	InteractionCount int        `json:"interaction_count"`
+	LastInteraction  *time.Time `json:"last_interaction"`
+	Tags             []string   `json:"tags"`
 }
 
 // ContactPermissions describes allowed actions for a detailed contact.
@@ -249,8 +251,18 @@ type ContactPermissions struct {
 // ContactDetail describes an API v2 contact detail response.
 type ContactDetail struct {
 	Contact
-	CreatedAt        time.Time      `json:"created_at"`
-	PerformanceStats map[string]any `json:"performance_stats"`
+	CreatedAt        time.Time                 `json:"created_at"`
+	PerformanceStats map[string]any            `json:"performance_stats"`
+	Relationship     ContactDetailRelationship `json:"relationship"`
+}
+
+// ContactDetailRelationship describes the detailed contact relationship.
+type ContactDetailRelationship struct {
+	AddedAt          time.Time           `json:"added_at"`
+	InteractionCount int                 `json:"interaction_count"`
+	LastInteraction  *time.Time          `json:"last_interaction"`
+	Tags             []string            `json:"tags"`
+	Permissions      *ContactPermissions `json:"permissions"`
 }
 
 // ContactAvailability describes a contact availability result.
