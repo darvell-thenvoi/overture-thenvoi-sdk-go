@@ -32,7 +32,7 @@ type ListChatRoomsResponse struct {
 // ListChatRooms fetches chat rooms available to the authenticated agent.
 func (client *Client) ListChatRooms(ctx context.Context) (*ListChatRoomsResponse, error) {
 	var out ListChatRoomsResponse
-	if err := client.Do(ctx, http.MethodGet, "/v1/chats", nil, &out); err != nil {
+	if err := client.Do(ctx, http.MethodGet, "/api/v1/agent/chats", nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
