@@ -31,11 +31,11 @@ func TestGetChatRoom(t *testing.T) {
 				if req.Method != http.MethodGet {
 					t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
 				}
-				if req.URL.String() != "https://api.test/v1/chats/chat_123" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats/chat_123" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
-				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
-					t.Fatalf("authorization = %s", got)
+				if got := req.Header.Get("X-API-Key"); got != "test-key" {
+					t.Fatalf("x-api-key = %s", got)
 				}
 			},
 			assertResult: func(t *testing.T, out *client.ChatRoom, err error) {
@@ -96,7 +96,7 @@ func TestGetChatRoom(t *testing.T) {
 			responseBody: `{"data":{"id":"a/b","name":"Escaped"}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
-				if req.URL.String() != "https://api.test/v1/chats/a%2Fb" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats/a%2Fb" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 			},

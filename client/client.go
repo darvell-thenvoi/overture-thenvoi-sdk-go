@@ -64,6 +64,7 @@ func (client *Client) Do(ctx context.Context, method string, path string, body a
 	}
 
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-API-Key", client.config.ApiKey)
 	req.Header.Set("Authorization", "Bearer "+client.config.ApiKey)
 	if client.config.UserAgent != "" {
 		req.Header.Set("User-Agent", client.config.UserAgent)

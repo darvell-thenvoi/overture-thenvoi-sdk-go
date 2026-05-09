@@ -36,6 +36,9 @@ func TestDoDecodesJSONSuccessAndSetsHeaders(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
 			t.Fatalf("authorization = %s", got)
 		}
+		if got := r.Header.Get("X-API-Key"); got != "test-key" {
+			t.Fatalf("x-api-key = %s", got)
+		}
 		if got := r.Header.Get("User-Agent"); got != "test-agent" {
 			t.Fatalf("user-agent = %s", got)
 		}
