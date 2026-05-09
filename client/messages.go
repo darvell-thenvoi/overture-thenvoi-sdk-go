@@ -37,8 +37,22 @@ type SendChatMessageInput struct {
 	Mentions    []Mention      `json:"mentions,omitempty"`
 }
 
+// MessageRecipient describes a recipient in a sent message acknowledgement.
+type MessageRecipient struct {
+	ID     string  `json:"id"`
+	Handle string  `json:"handle"`
+	Name   *string `json:"name,omitempty"`
+}
+
+// MessageSentResponse describes the send acknowledgement returned by the API.
+type MessageSentResponse struct {
+	ID         string             `json:"id"`
+	Success    bool               `json:"success"`
+	Recipients []MessageRecipient `json:"recipients,omitempty"`
+}
+
 // SendChatMessage sends a message to a chat room.
-func (client *Client) SendChatMessage(ctx context.Context, chatID string, input SendChatMessageInput) (*ChatMessage, error) {
+func (client *Client) SendChatMessage(ctx context.Context, chatID string, input SendChatMessageInput) (*MessageSentResponse, error) {
 	if chatID == "" {
 		return nil, errors.New("thenvoi: chat id is required")
 	}
@@ -49,13 +63,13 @@ func (client *Client) SendChatMessage(ctx context.Context, chatID string, input 
 	escapedChatID := url.PathEscape(chatID)
 
 	var out struct {
-		Data ChatMessage `json:"data"`
+		Data MessageSentResponse `json:"data"`
 	}
 
 	err := client.Do(
 		ctx,
 		http.MethodPost,
-		"/v1/chats/"+escapedChatID+"/messages",
+		"/api/v1/agent/chats/"+escapedChatID+"/messages",
 		map[string]any{"message": input},
 		&out,
 	)

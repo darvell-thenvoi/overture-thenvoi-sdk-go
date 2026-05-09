@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/darvell-thenvoi/overture-thenvoi-sdk-go/client"
 )
@@ -21,7 +20,7 @@ func TestSendChatMessage(t *testing.T) {
 		responseCode  int
 		responseBody  string
 		assertRequest func(*testing.T, *http.Request)
-		assertResult  func(*testing.T, *client.ChatMessage, error)
+		assertResult  func(*testing.T, *client.MessageSentResponse, error)
 		wantCalled    bool
 	}{
 		{
@@ -39,13 +38,13 @@ func TestSendChatMessage(t *testing.T) {
 				}},
 			},
 			responseCode: http.StatusOK,
-			responseBody: `{"data":{"id":"msg_1","content":"hello room","sender_id":"agent_1","sender_type":"agent","sender_name":"Thenvoi Bot","message_type":"task","metadata":{"priority":"high"},"inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-02T03:05:05Z"}}`,
+			responseBody: `{"data":{"id":"msg_1","success":true,"recipients":[{"id":"user_1","handle":"@alice","name":"Alice"},{"id":"user_2","handle":"@bob"}]}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 				if req.Method != http.MethodPost {
 					t.Fatalf("method = %s, want %s", req.Method, http.MethodPost)
 				}
-				if req.URL.String() != "https://api.test/v1/chats/chat_123/messages" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats/chat_123/messages" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
@@ -97,7 +96,7 @@ func TestSendChatMessage(t *testing.T) {
 					t.Fatalf("mention username should be omitted: %#v", mention)
 				}
 			},
-			assertResult: func(t *testing.T, out *client.ChatMessage, err error) {
+			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
 				t.Helper()
 				if err != nil {
 					t.Fatalf("SendChatMessage returned error: %v", err)
@@ -108,38 +107,42 @@ func TestSendChatMessage(t *testing.T) {
 				if out.ID != "msg_1" {
 					t.Fatalf("id = %s", out.ID)
 				}
-				if out.SenderName == nil || *out.SenderName != "Thenvoi Bot" {
-					t.Fatalf("sender_name = %#v", out.SenderName)
+				if !out.Success {
+					t.Fatalf("success = %t", out.Success)
 				}
-				wantInserted, _ := time.Parse(time.RFC3339, "2026-01-02T03:04:05Z")
-				if !out.InsertedAt.Equal(wantInserted) {
-					t.Fatalf("inserted_at = %s", out.InsertedAt)
+				if len(out.Recipients) != 2 {
+					t.Fatalf("recipients len = %d", len(out.Recipients))
 				}
-				wantUpdated, _ := time.Parse(time.RFC3339, "2026-01-02T03:05:05Z")
-				if out.UpdatedAt == nil || !out.UpdatedAt.Equal(wantUpdated) {
-					t.Fatalf("updated_at = %#v", out.UpdatedAt)
+				if out.Recipients[0].ID != "user_1" || out.Recipients[0].Handle != "@alice" {
+					t.Fatalf("recipient[0] = %#v", out.Recipients[0])
+				}
+				if out.Recipients[0].Name == nil || *out.Recipients[0].Name != "Alice" {
+					t.Fatalf("recipient[0].name = %#v", out.Recipients[0].Name)
+				}
+				if out.Recipients[1].Name != nil {
+					t.Fatalf("recipient[1].name = %#v, want nil", out.Recipients[1].Name)
 				}
 			},
 			wantCalled: true,
 		},
 		{
-			name:   "decodes null sender name and omitted updated at",
+			name:   "decodes omitted recipients",
 			chatID: "chat_123",
 			input: client.SendChatMessageInput{
 				Content: "hello room",
 			},
 			responseCode: http.StatusOK,
-			responseBody: `{"data":{"id":"msg_2","content":"hello room","sender_id":"agent_1","sender_type":"agent","sender_name":null,"message_type":"task","inserted_at":"2026-01-02T03:04:05Z"}}`,
-			assertResult: func(t *testing.T, out *client.ChatMessage, err error) {
+			responseBody: `{"data":{"id":"msg_2","success":false}}`,
+			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
 				t.Helper()
 				if err != nil {
 					t.Fatalf("SendChatMessage returned error: %v", err)
 				}
-				if out.SenderName != nil {
-					t.Fatalf("sender_name = %#v, want nil", out.SenderName)
+				if out.Success {
+					t.Fatalf("success = %t, want false", out.Success)
 				}
-				if out.UpdatedAt != nil {
-					t.Fatalf("updated_at = %#v, want nil", out.UpdatedAt)
+				if len(out.Recipients) != 0 {
+					t.Fatalf("recipients len = %d, want 0", len(out.Recipients))
 				}
 			},
 			wantCalled: true,
@@ -151,14 +154,14 @@ func TestSendChatMessage(t *testing.T) {
 				Content: "hello",
 			},
 			responseCode: http.StatusOK,
-			responseBody: `{"data":{"id":"msg_3","content":"hello","sender_id":"agent_1","sender_type":"agent","message_type":"task","inserted_at":"2026-01-02T03:04:05Z"}}`,
+			responseBody: `{"data":{"id":"msg_3","success":true}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
-				if req.URL.String() != "https://api.test/v1/chats/a%2Fb/messages" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats/a%2Fb/messages" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 			},
-			assertResult: func(t *testing.T, out *client.ChatMessage, err error) {
+			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
 				t.Helper()
 				if err != nil {
 					t.Fatalf("SendChatMessage returned error: %v", err)
@@ -175,7 +178,7 @@ func TestSendChatMessage(t *testing.T) {
 			input: client.SendChatMessageInput{
 				Content: "hello",
 			},
-			assertResult: func(t *testing.T, out *client.ChatMessage, err error) {
+			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
 				t.Helper()
 				if out != nil {
 					t.Fatalf("message = %#v, want nil", out)
@@ -193,7 +196,7 @@ func TestSendChatMessage(t *testing.T) {
 			name:   "returns validation error for empty content without network",
 			chatID: "chat_123",
 			input:  client.SendChatMessageInput{},
-			assertResult: func(t *testing.T, out *client.ChatMessage, err error) {
+			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
 				t.Helper()
 				if out != nil {
 					t.Fatalf("message = %#v, want nil", out)
@@ -215,7 +218,7 @@ func TestSendChatMessage(t *testing.T) {
 			},
 			responseCode: http.StatusUnauthorized,
 			responseBody: `{"error":{"code":"unauthorized","message":"bad key"}}`,
-			assertResult: func(t *testing.T, out *client.ChatMessage, err error) {
+			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
 				t.Helper()
 				if out != nil {
 					t.Fatalf("message = %#v, want nil", out)
