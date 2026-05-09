@@ -22,6 +22,14 @@ type V2PaginationMetadata struct {
 	TotalPages int `json:"total_pages"`
 }
 
+// Pagination describes API v2 pagination fields returned as pagination.
+type Pagination struct {
+	Page       int `json:"page"`
+	PerPage    int `json:"per_page"`
+	TotalPages int `json:"total_pages"`
+	TotalItems int `json:"total_items"`
+}
+
 // PageInput contains common pagination fields.
 type PageInput struct {
 	Page     *int
@@ -70,6 +78,35 @@ type AgentIdentity struct {
 	OwnerUUID         string    `json:"owner_uuid"`
 	Tags              []string  `json:"tags,omitempty"`
 	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+// Agent describes an API v2 agent.
+type Agent struct {
+	ID                     string         `json:"id"`
+	Name                   string         `json:"name"`
+	Description            string         `json:"description"`
+	ModelType              string         `json:"model_type"`
+	IsExternal             bool           `json:"is_external"`
+	OwnerUUID              string         `json:"owner_uuid"`
+	OrganizationID         *string        `json:"organization_id"`
+	SystemPromptID         *string        `json:"system_prompt_id"`
+	StructuredOutputSchema map[string]any `json:"structured_output_schema"`
+	InsertedAt             time.Time      `json:"inserted_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+}
+
+// AgentListItem describes an API v2 agent list row.
+type AgentListItem struct {
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	Description    string    `json:"description"`
+	ModelType      string    `json:"model_type"`
+	IsExternal     bool      `json:"is_external"`
+	OwnerUUID      string    `json:"owner_uuid"`
+	SystemPromptID *string   `json:"system_prompt_id"`
+	OrganizationID *string   `json:"organization_id"`
+	InsertedAt     time.Time `json:"inserted_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Mention describes a user or agent mention in a chat message.
@@ -143,6 +180,107 @@ type ChatParticipant struct {
 	Role   string  `json:"role"`
 	Status string  `json:"status"`
 	Type   string  `json:"type"`
+}
+
+// ExecutionResponse describes the result of starting an API v2 agent execution.
+type ExecutionResponse struct {
+	ExecutionID *string        `json:"execution_id"`
+	TaskID      string         `json:"task_id"`
+	ChatRoomID  string         `json:"chat_room_id"`
+	Status      string         `json:"status"`
+	Agent       ExecutionAgent `json:"agent"`
+	Request     string         `json:"request"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Links       ExecutionLinks `json:"links"`
+}
+
+// ExecutionAgent describes the executed agent.
+type ExecutionAgent struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// ExecutionLinks contains API links for an execution.
+type ExecutionLinks struct {
+	ChatRoom string `json:"chat_room"`
+	Messages string `json:"messages"`
+	Task     string `json:"task"`
+}
+
+// Contact describes an API v2 contact.
+type Contact struct {
+	ID                 string              `json:"id"`
+	Name               string              `json:"name"`
+	Type               string              `json:"type"`
+	Description        *string             `json:"description"`
+	Email              *string             `json:"email"`
+	AvatarURL          *string             `json:"avatar_url"`
+	CanAddToChats      bool                `json:"can_add_to_chats"`
+	CanExecuteRequests *bool               `json:"can_execute_requests"`
+	Status             ContactStatus       `json:"status"`
+	Workload           map[string]any      `json:"workload"`
+	Capabilities       []string            `json:"capabilities"`
+	Metadata           map[string]any      `json:"metadata"`
+	Relationship       ContactRelationship `json:"relationship"`
+}
+
+// ContactStatus describes contact connection and availability state.
+type ContactStatus struct {
+	Connection    string    `json:"connection"`
+	Availability  *string   `json:"availability"`
+	LastSeen      time.Time `json:"last_seen"`
+	StatusMessage *string   `json:"status_message"`
+}
+
+// ContactRelationship describes a contact relationship.
+type ContactRelationship struct {
+	AddedAt          time.Time  `json:"added_at"`
+	InteractionCount int        `json:"interaction_count"`
+	LastInteraction  *time.Time `json:"last_interaction"`
+	Tags             []string   `json:"tags"`
+}
+
+// ContactPermissions describes allowed actions for a detailed contact.
+type ContactPermissions struct {
+	CanAddToChats      bool `json:"can_add_to_chats"`
+	CanRemoveFromChats bool `json:"can_remove_from_chats"`
+	CanExecuteRequests bool `json:"can_execute_requests"`
+	CanViewPerformance bool `json:"can_view_performance"`
+}
+
+// ContactDetail describes an API v2 contact detail response.
+type ContactDetail struct {
+	Contact
+	CreatedAt        time.Time                 `json:"created_at"`
+	PerformanceStats map[string]any            `json:"performance_stats"`
+	Relationship     ContactDetailRelationship `json:"relationship"`
+}
+
+// ContactDetailRelationship describes the detailed contact relationship.
+type ContactDetailRelationship struct {
+	AddedAt          time.Time           `json:"added_at"`
+	InteractionCount int                 `json:"interaction_count"`
+	LastInteraction  *time.Time          `json:"last_interaction"`
+	Tags             []string            `json:"tags"`
+	Permissions      *ContactPermissions `json:"permissions"`
+}
+
+// ContactAvailability describes a contact availability result.
+type ContactAvailability struct {
+	ID                string        `json:"id"`
+	Available         bool          `json:"available"`
+	Status            ContactStatus `json:"status"`
+	EstimatedWaitTime *string       `json:"estimated_wait_time"`
+	Confidence        float64       `json:"confidence"`
+	UnavailableReason *string       `json:"unavailable_reason"`
+}
+
+// Model describes an API v2 model.
+type Model struct {
+	ID       string `json:"id"`
+	Provider string `json:"provider"`
+	Name     string `json:"name"`
+	BaseURL  string `json:"base_url"`
 }
 
 // AgentContact describes an agent contact relationship.

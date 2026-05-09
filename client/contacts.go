@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // ListContactsInput contains filters for ListContacts.
@@ -82,6 +83,55 @@ type ContactOperationResult struct {
 	Status string `json:"status"`
 }
 
+// ContactSearchFilters contains filters for SearchContacts.
+type ContactSearchFilters struct {
+	Types        []string                 `json:"types,omitempty"`
+	Capabilities *ContactCapabilityFilter `json:"capabilities,omitempty"`
+	Tags         []string                 `json:"tags,omitempty"`
+}
+
+// ContactCapabilityFilter contains required or alternative contact capabilities.
+type ContactCapabilityFilter struct {
+	Required []string `json:"required,omitempty"`
+	AnyOf    []string `json:"any_of,omitempty"`
+}
+
+// SearchContactsInput contains fields for searching API v2 contacts.
+type SearchContactsInput struct {
+	Query   string                `json:"query,omitempty"`
+	Filters *ContactSearchFilters `json:"filters,omitempty"`
+	Page    *int                  `json:"page,omitempty"`
+	PerPage *int                  `json:"per_page,omitempty"`
+}
+
+// SearchContactsResponse contains contact search results and pagination.
+type SearchContactsResponse struct {
+	Data       []Contact  `json:"data"`
+	Pagination Pagination `json:"pagination"`
+}
+
+// CheckContactAvailabilityInput contains contact availability request fields.
+type CheckContactAvailabilityInput struct {
+	ContactIDs              []string `json:"contact_ids"`
+	Purpose                 string   `json:"purpose,omitempty"`
+	RequiredDurationMinutes *int     `json:"required_duration_minutes,omitempty"`
+}
+
+// CheckContactAvailabilityResponse contains contact availability results.
+type CheckContactAvailabilityResponse struct {
+	Contacts  []ContactAvailability      `json:"contacts"`
+	Summary   ContactAvailabilitySummary `json:"summary"`
+	Timestamp time.Time                  `json:"timestamp"`
+}
+
+// ContactAvailabilitySummary describes aggregate availability counts.
+type ContactAvailabilitySummary struct {
+	TotalChecked  int `json:"total_checked"`
+	AvailableNow  int `json:"available_now"`
+	AvailableSoon int `json:"available_soon"`
+	Unavailable   int `json:"unavailable"`
+}
+
 // ListContacts lists the current agent's contacts.
 func (client *Client) ListContacts(ctx context.Context, input *ListContactsInput) (*ListContactsResponse, error) {
 	values := url.Values{}
@@ -148,4 +198,47 @@ func (client *Client) RespondContactRequest(ctx context.Context, input RespondCo
 		return nil, err
 	}
 	return out.Data, nil
+}
+
+// GetContactDetails fetches API v2 contact details.
+func (client *Client) GetContactDetails(ctx context.Context, contactID string) (*ContactDetail, error) {
+	if contactID == "" {
+		return nil, errors.New("thenvoi: contact id is required")
+	}
+
+	var out struct {
+		Data ContactDetail `json:"data"`
+	}
+	path := "/api/v2/agents/me/contacts/" + url.PathEscape(contactID)
+	if err := client.Do(ctx, http.MethodGet, path, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
+}
+
+// SearchContacts searches API v2 contacts.
+func (client *Client) SearchContacts(ctx context.Context, input SearchContactsInput) (*SearchContactsResponse, error) {
+	var out SearchContactsResponse
+	if err := client.Do(ctx, http.MethodPost, "/api/v2/agents/me/contacts/search", input, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// CheckContactAvailability checks availability for up to 50 API v2 contacts.
+func (client *Client) CheckContactAvailability(ctx context.Context, input CheckContactAvailabilityInput) (*CheckContactAvailabilityResponse, error) {
+	if len(input.ContactIDs) == 0 {
+		return nil, errors.New("thenvoi: at least one contact id is required")
+	}
+	if len(input.ContactIDs) > 50 {
+		return nil, errors.New("thenvoi: at most 50 contact ids are allowed")
+	}
+
+	var out struct {
+		Data CheckContactAvailabilityResponse `json:"data"`
+	}
+	if err := client.Do(ctx, http.MethodPost, "/api/v2/agents/me/contacts/availability", input, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
 }

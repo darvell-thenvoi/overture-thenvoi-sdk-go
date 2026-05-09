@@ -165,3 +165,60 @@ func TestGetChatRoom(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateAndDeleteChatRoomV2(t *testing.T) {
+	t.Parallel()
+	seen := []string{}
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		seen = append(seen, req.Method+" "+req.URL.String())
+		switch req.Method {
+		case http.MethodPut:
+			if req.URL.String() != "https://api.test/api/v2/chats/chat%2F1" {
+				t.Fatalf("url=%s", req.URL.String())
+			}
+			assertNestedJSONFields(t, req, "chat", map[string]any{"title": "New title", "status": "archived"})
+			return jsonResponse(http.StatusOK, `{"data":{"id":"chat/1","title":"New title","status":"archived","inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-03T03:04:05Z"}}`), nil
+		case http.MethodDelete:
+			if req.URL.String() != "https://api.test/api/v2/chats/chat%2F1" {
+				t.Fatalf("url=%s", req.URL.String())
+			}
+			return jsonResponse(http.StatusNoContent, ``), nil
+		default:
+			t.Fatalf("method=%s", req.Method)
+			return nil, nil
+		}
+	})
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
+	updated, err := sdk.UpdateChatRoom(context.Background(), "chat/1", client.UpdateChatRoomInput{Title: "New title", Status: "archived"})
+	if err != nil || updated.Title == nil || *updated.Title != "New title" {
+		t.Fatalf("UpdateChatRoom out=%#v err=%v", updated, err)
+	}
+	if err := sdk.DeleteChatRoom(context.Background(), "chat/1"); err != nil {
+		t.Fatalf("DeleteChatRoom returned error: %v", err)
+	}
+	want := []string{
+		"PUT https://api.test/api/v2/chats/chat%2F1",
+		"DELETE https://api.test/api/v2/chats/chat%2F1",
+	}
+	if len(seen) != len(want) {
+		t.Fatalf("seen=%#v", seen)
+	}
+	for i := range want {
+		if seen[i] != want[i] {
+			t.Fatalf("seen[%d]=%s want %s", i, seen[i], want[i])
+		}
+	}
+}
+
+func TestChatRoomV2ValidationAndAPIErrors(t *testing.T) {
+	t.Parallel()
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusNotFound, `{"error":{"code":"not_found","message":"missing"}}`), nil
+	})}))
+	if _, err := sdk.UpdateChatRoom(context.Background(), "", client.UpdateChatRoomInput{}); err == nil || err.Error() != "thenvoi: chat id is required" {
+		t.Fatalf("UpdateChatRoom validation err=%v", err)
+	}
+	if err := sdk.DeleteChatRoom(context.Background(), "chat_1"); !errors.Is(err, client.ErrNotFound) {
+		t.Fatalf("DeleteChatRoom err=%v", err)
+	}
+}

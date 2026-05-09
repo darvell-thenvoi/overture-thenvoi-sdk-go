@@ -152,6 +152,19 @@ func (client *Client) MarkChatMessageFailed(ctx context.Context, chatID string, 
 	return client.markChatMessageStatus(ctx, chatID, messageID, "failed", map[string]string{"error": reason})
 }
 
+// DeleteChatMessage deletes an API v2 chat message.
+func (client *Client) DeleteChatMessage(ctx context.Context, chatID string, messageID string) error {
+	if chatID == "" {
+		return errors.New("thenvoi: chat id is required")
+	}
+	if messageID == "" {
+		return errors.New("thenvoi: message id is required")
+	}
+
+	path := "/api/v2/chats/" + url.PathEscape(chatID) + "/messages/" + url.PathEscape(messageID)
+	return client.Do(ctx, http.MethodDelete, path, nil, nil)
+}
+
 func (client *Client) markChatMessageStatus(ctx context.Context, chatID string, messageID string, status string, body any) (*MessageStatusResponse, error) {
 	if chatID == "" {
 		return nil, errors.New("thenvoi: chat id is required")
