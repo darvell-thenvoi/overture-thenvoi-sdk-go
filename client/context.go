@@ -15,8 +15,8 @@ type GetChatContextInput struct {
 
 // GetChatContextResponse contains context messages and pagination metadata.
 type GetChatContextResponse struct {
-	Data     []ChatMessage      `json:"data"`
-	Metadata PaginationMetadata `json:"metadata"`
+	Data []ChatMessage      `json:"data"`
+	Meta PaginationMetadata `json:"meta"`
 }
 
 // GetChatContext returns messages relevant to the agent for execution context.

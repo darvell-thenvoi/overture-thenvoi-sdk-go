@@ -45,6 +45,11 @@ func (client *Client) SendChatMessage(ctx context.Context, chatID string, input 
 	if len(input.Mentions) == 0 {
 		return nil, errors.New("thenvoi: at least one mention is required")
 	}
+	for _, mention := range input.Mentions {
+		if mention.ID == "" {
+			return nil, errors.New("thenvoi: mention id is required")
+		}
+	}
 
 	var out struct {
 		Data MessageSentResponse `json:"data"`

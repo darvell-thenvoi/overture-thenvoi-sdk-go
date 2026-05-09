@@ -95,7 +95,7 @@ func (client *Client) AddContact(ctx context.Context, input AddContactInput) (*C
 
 // RemoveContact removes a contact by handle or contact id.
 func (client *Client) RemoveContact(ctx context.Context, input RemoveContactInput) (*ContactOperationResult, error) {
-	if input.Handle == nil && input.ContactID == nil {
+	if (input.Handle == nil || *input.Handle == "") && (input.ContactID == nil || *input.ContactID == "") {
 		return nil, errors.New("thenvoi: handle or contact id is required")
 	}
 	var out ContactOperationResponse
@@ -125,6 +125,9 @@ func (client *Client) ListContactRequests(ctx context.Context, input *ListContac
 func (client *Client) RespondContactRequest(ctx context.Context, input RespondContactRequestInput) (*ContactOperationResult, error) {
 	if input.Action == "" {
 		return nil, errors.New("thenvoi: action is required")
+	}
+	if (input.Handle == nil || *input.Handle == "") && (input.RequestID == nil || *input.RequestID == "") {
+		return nil, errors.New("thenvoi: handle or request id is required")
 	}
 	var out ContactOperationResponse
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/requests/respond", input, &out); err != nil {

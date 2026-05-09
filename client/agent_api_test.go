@@ -72,21 +72,25 @@ func TestContextPeersContactsAndMemoriesEndpoints(t *testing.T) {
 		seen = append(seen, req.Method+" "+req.URL.String())
 		switch req.URL.Path {
 		case "/api/v1/agent/chats/chat_1/context":
-			return jsonResponse(http.StatusOK, `{"data":[{"id":"msg_1","content":"hello","message_type":"text","sender_id":"user_1","sender_type":"User"}],"metadata":{"page":2,"page_size":25}}`), nil
+			return jsonResponse(http.StatusOK, `{"data":[{"id":"msg_1","content":"hello","message_type":"text","sender_id":"user_1","sender_type":"User"}],"meta":{"page":2,"page_size":25}}`), nil
 		case "/api/v1/agent/peers":
 			return jsonResponse(http.StatusOK, `{"data":[{"id":"agent_2","handle":"owner/agent","is_contact":false,"name":"Agent","source":"registry","type":"Agent"}],"metadata":{"page":2,"page_size":25}}`), nil
 		case "/api/v1/agent/contacts":
 			return jsonResponse(http.StatusOK, `{"data":[{"id":"contact_1","handle":"owner/agent","inserted_at":"2026-01-02T03:04:05Z","type":"Agent"}],"metadata":{"page":2,"page_size":25}}`), nil
 		case "/api/v1/agent/contacts/add":
+			assertJSONField(t, req, "handle", "owner/agent")
 			return jsonResponse(http.StatusOK, `{"data":{"id":"request_1","status":"pending"}}`), nil
 		case "/api/v1/agent/contacts/remove":
+			assertJSONField(t, req, "handle", "owner/agent")
 			return jsonResponse(http.StatusOK, `{"data":{"status":"removed"}}`), nil
 		case "/api/v1/agent/contacts/requests":
 			return jsonResponse(http.StatusOK, `{"data":{"received":[{"id":"req_1","status":"pending"}],"sent":[]},"metadata":{"page":2,"page_size":25}}`), nil
 		case "/api/v1/agent/contacts/requests/respond":
+			assertJSONFields(t, req, map[string]any{"action": "approve", "request_id": "req_1"})
 			return jsonResponse(http.StatusOK, `{"data":{"id":"req_1","status":"approved"}}`), nil
 		case "/api/v1/agent/memories":
 			if req.Method == http.MethodPost {
+				assertNestedJSONFields(t, req, "memory", map[string]any{"content": "likes SUVs", "system": "long_term"})
 				return jsonResponse(http.StatusOK, `{"data":{"id":"mem_1","content":"likes SUVs","inserted_at":"2026-01-02T03:04:05Z","scope":"subject","segment":"user","system":"long_term","type":"semantic"}}`), nil
 			}
 			return jsonResponse(http.StatusOK, `{"data":[{"id":"mem_1","content":"likes SUVs","inserted_at":"2026-01-02T03:04:05Z","scope":"subject","segment":"user","system":"long_term","type":"semantic"}],"meta":{"page_size":25}}`), nil
@@ -134,9 +138,75 @@ func TestContextPeersContactsAndMemoriesEndpoints(t *testing.T) {
 	if _, err := sdk.ArchiveMemory(context.Background(), "mem_1"); err != nil {
 		t.Fatal(err)
 	}
-	wantFirst := "GET https://api.test/api/v1/agent/chats/chat_1/context?page=2&page_size=25"
-	if seen[0] != wantFirst {
-		t.Fatalf("seen[0]=%s want %s", seen[0], wantFirst)
+	want := []string{
+		"GET https://api.test/api/v1/agent/chats/chat_1/context?page=2&page_size=25",
+		"GET https://api.test/api/v1/agent/peers?not_in_chat=chat_1&page=2&page_size=25",
+		"GET https://api.test/api/v1/agent/contacts?page=2&page_size=25",
+		"POST https://api.test/api/v1/agent/contacts/add",
+		"POST https://api.test/api/v1/agent/contacts/remove",
+		"GET https://api.test/api/v1/agent/contacts/requests?page=2&page_size=25&sent_status=pending",
+		"POST https://api.test/api/v1/agent/contacts/requests/respond",
+		"GET https://api.test/api/v1/agent/memories?content_query=prefers+SUV&page_size=25&scope=subject&segment=user&status=active&system=long_term&type=semantic",
+		"POST https://api.test/api/v1/agent/memories",
+		"GET https://api.test/api/v1/agent/memories/mem_1",
+		"POST https://api.test/api/v1/agent/memories/mem_1/supersede",
+		"POST https://api.test/api/v1/agent/memories/mem_1/archive",
+	}
+	if len(seen) != len(want) {
+		t.Fatalf("seen=%#v", seen)
+	}
+	for i := range want {
+		if seen[i] != want[i] {
+			t.Fatalf("seen[%d]=%s want %s", i, seen[i], want[i])
+		}
+	}
+}
+
+func TestClientSideValidation(t *testing.T) {
+	t.Parallel()
+	sdk := client.New(client.WithApiKey("test-key"), client.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		t.Fatalf("network should not be called for invalid input")
+		return nil, nil
+	})}))
+	if _, err := sdk.SendChatMessage(context.Background(), "chat_1", client.SendChatMessageInput{Content: "hello", Mentions: []client.Mention{{}}}); err == nil || err.Error() != "thenvoi: mention id is required" {
+		t.Fatalf("mention validation err=%v", err)
+	}
+	if _, err := sdk.RemoveContact(context.Background(), client.RemoveContactInput{Handle: stringPtr("")}); err == nil || err.Error() != "thenvoi: handle or contact id is required" {
+		t.Fatalf("remove validation err=%v", err)
+	}
+	if _, err := sdk.RespondContactRequest(context.Background(), client.RespondContactRequestInput{Action: "approve"}); err == nil || err.Error() != "thenvoi: handle or request id is required" {
+		t.Fatalf("respond validation err=%v", err)
+	}
+}
+
+func assertJSONField(t *testing.T, req *http.Request, key string, want any) {
+	t.Helper()
+	assertJSONFields(t, req, map[string]any{key: want})
+}
+
+func assertJSONFields(t *testing.T, req *http.Request, want map[string]any) {
+	t.Helper()
+	var payload map[string]any
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode request body: %v", err)
+	}
+	for key, value := range want {
+		if payload[key] != value {
+			t.Fatalf("payload[%s]=%#v want %#v", key, payload[key], value)
+		}
+	}
+}
+
+func assertNestedJSONFields(t *testing.T, req *http.Request, outer string, want map[string]any) {
+	t.Helper()
+	var payload map[string]map[string]any
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode request body: %v", err)
+	}
+	for key, value := range want {
+		if payload[outer][key] != value {
+			t.Fatalf("payload[%s][%s]=%#v want %#v", outer, key, payload[outer][key], value)
+		}
 	}
 }
 
