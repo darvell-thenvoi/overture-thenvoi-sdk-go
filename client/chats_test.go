@@ -31,7 +31,7 @@ func TestListChatRooms(t *testing.T) {
 				if req.Method != http.MethodGet {
 					t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
 				}
-				if req.URL.String() != "https://api.test/v1/chats" {
+				if req.URL.String() != "https://api.test/api/v1/agent/chats" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {

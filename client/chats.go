@@ -17,7 +17,7 @@ func (client *Client) ListChatRooms(ctx context.Context) ([]ChatRoom, error) {
 		Data []ChatRoom `json:"data"`
 	}
 
-	if err := client.Do(ctx, http.MethodGet, "/v1/chats", nil, &out); err != nil {
+	if err := client.Do(ctx, http.MethodGet, "/api/v1/agent/chats", nil, &out); err != nil {
 		return nil, err
 	}
 
