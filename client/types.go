@@ -14,10 +14,24 @@ type PaginationMetadata struct {
 	TotalPages *int `json:"total_pages,omitempty"`
 }
 
+// V2PaginationMetadata describes API v2 paginated list response metadata.
+type V2PaginationMetadata struct {
+	Page       int `json:"page"`
+	PerPage    int `json:"per_page"`
+	TotalCount int `json:"total_count"`
+	TotalPages int `json:"total_pages"`
+}
+
 // PageInput contains common pagination fields.
 type PageInput struct {
 	Page     *int
 	PageSize *int
+}
+
+// V2PageInput contains common API v2 pagination fields.
+type V2PageInput struct {
+	Page    *int
+	PerPage *int
 }
 
 func addPagination(values url.Values, input PageInput) {
@@ -26,6 +40,15 @@ func addPagination(values url.Values, input PageInput) {
 	}
 	if input.PageSize != nil {
 		values.Set("page_size", strconv.Itoa(*input.PageSize))
+	}
+}
+
+func addV2Pagination(values url.Values, input V2PageInput) {
+	if input.Page != nil {
+		values.Set("page", strconv.Itoa(*input.Page))
+	}
+	if input.PerPage != nil {
+		values.Set("per_page", strconv.Itoa(*input.PerPage))
 	}
 }
 
@@ -58,11 +81,15 @@ type Mention struct {
 
 // ChatRoom describes a chat room returned by the agent chat API.
 type ChatRoom struct {
-	ID         string    `json:"id"`
-	InsertedAt time.Time `json:"inserted_at"`
-	TaskID     *string   `json:"task_id"`
-	Title      *string   `json:"title"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         string         `json:"id"`
+	DeletedAt  *time.Time     `json:"deleted_at"`
+	InsertedAt time.Time      `json:"inserted_at"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
+	Status     *string        `json:"status"`
+	TaskID     *string        `json:"task_id"`
+	Title      *string        `json:"title"`
+	Type       *string        `json:"type"`
+	UpdatedAt  time.Time      `json:"updated_at"`
 }
 
 // ChatMessage describes a chat message returned by list/context APIs.

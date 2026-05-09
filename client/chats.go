@@ -19,6 +19,19 @@ type ListChatRoomsResponse struct {
 	Metadata PaginationMetadata `json:"metadata"`
 }
 
+// ListMyChatsInput contains filters for ListMyChats.
+type ListMyChatsInput struct {
+	Status  *string
+	Page    *int
+	PerPage *int
+}
+
+// ListMyChatsResponse contains API v2 chat rooms and pagination metadata.
+type ListMyChatsResponse struct {
+	Data     []ChatRoom           `json:"data"`
+	Metadata V2PaginationMetadata `json:"metadata"`
+}
+
 // CreateChatRoomInput contains fields for creating an agent-owned chat room.
 type CreateChatRoomInput struct {
 	TaskID *string `json:"task_id,omitempty"`
@@ -33,6 +46,23 @@ func (client *Client) ListChatRooms(ctx context.Context, input *ListChatRoomsInp
 
 	var out ListChatRoomsResponse
 	if err := client.Do(ctx, http.MethodGet, appendQuery("/api/v1/agent/chats", values), nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ListMyChats lists chat rooms visible to the current user.
+func (client *Client) ListMyChats(ctx context.Context, input *ListMyChatsInput) (*ListMyChatsResponse, error) {
+	values := url.Values{}
+	if input != nil {
+		addV2Pagination(values, V2PageInput{Page: input.Page, PerPage: input.PerPage})
+		if input.Status != nil {
+			values.Set("status", *input.Status)
+		}
+	}
+
+	var out ListMyChatsResponse
+	if err := client.Do(ctx, http.MethodGet, appendQuery("/api/v2/me/chats", values), nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

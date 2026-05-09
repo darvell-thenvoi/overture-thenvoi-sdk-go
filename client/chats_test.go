@@ -43,6 +43,37 @@ func TestListChatRooms(t *testing.T) {
 	}
 }
 
+func TestListMyChats(t *testing.T) {
+	t.Parallel()
+	page := 2
+	perPage := 25
+	status := "active"
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("method = %s", req.Method)
+		}
+		if req.URL.String() != "https://api.test/api/v2/me/chats?page=2&per_page=25&status=active" {
+			t.Fatalf("url = %s", req.URL.String())
+		}
+		return jsonResponse(http.StatusOK, `{"data":[{"id":"chat_1","title":"Roadmap","status":"active","type":"group","metadata":{"topic":"sdk"},"task_id":"task_1","deleted_at":null,"inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-03T03:04:05Z"}],"metadata":{"page":2,"per_page":25,"total_count":1,"total_pages":1}}`), nil
+	})
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
+
+	out, err := sdk.ListMyChats(context.Background(), &client.ListMyChatsInput{Status: &status, Page: &page, PerPage: &perPage})
+	if err != nil {
+		t.Fatalf("ListMyChats returned error: %v", err)
+	}
+	if len(out.Data) != 1 || out.Data[0].Status == nil || *out.Data[0].Status != "active" {
+		t.Fatalf("data = %#v", out.Data)
+	}
+	if out.Data[0].Type == nil || *out.Data[0].Type != "group" || out.Data[0].Metadata["topic"] != "sdk" {
+		t.Fatalf("chat = %#v", out.Data[0])
+	}
+	if out.Metadata.PerPage != 25 || out.Metadata.TotalCount != 1 {
+		t.Fatalf("metadata = %#v", out.Metadata)
+	}
+}
+
 func TestGetChatRoom(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
