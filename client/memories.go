@@ -128,11 +128,11 @@ func (client *Client) memoryOperation(ctx context.Context, memoryID string, oper
 		return nil, errors.New("thenvoi: memory id is required")
 	}
 	var out struct {
-		Data Memory `json:"data"`
+		Data *Memory `json:"data,omitempty"`
 	}
 	path := "/api/v1/agent/memories/" + url.PathEscape(memoryID) + "/" + operation
 	if err := client.Do(ctx, http.MethodPost, path, nil, &out); err != nil {
 		return nil, err
 	}
-	return &out.Data, nil
+	return out.Data, nil
 }

@@ -40,14 +40,28 @@ type ListContactRequestsInput struct {
 
 // ListContactRequestsResponse contains received and sent contact requests.
 type ListContactRequestsResponse struct {
-	Data     ContactRequestsData `json:"data"`
-	Metadata map[string]any      `json:"metadata,omitempty"`
+	Data     ContactRequestsData      `json:"data"`
+	Metadata *ContactRequestsMetadata `json:"metadata,omitempty"`
 }
 
 // ContactRequestsData contains received and sent contact requests.
 type ContactRequestsData struct {
 	Received []ContactRequest `json:"received,omitempty"`
 	Sent     []ContactRequest `json:"sent,omitempty"`
+}
+
+// ContactRequestsMetadata contains per-direction contact request pagination metadata.
+type ContactRequestsMetadata struct {
+	Page     int                             `json:"page"`
+	PageSize int                             `json:"page_size"`
+	Received ContactRequestDirectionMetadata `json:"received"`
+	Sent     ContactRequestDirectionMetadata `json:"sent"`
+}
+
+// ContactRequestDirectionMetadata contains pagination totals for one contact request direction.
+type ContactRequestDirectionMetadata struct {
+	Total      int `json:"total"`
+	TotalPages int `json:"total_pages"`
 }
 
 // RespondContactRequestInput contains fields for approving, rejecting, or canceling a request.
@@ -59,7 +73,7 @@ type RespondContactRequestInput struct {
 
 // ContactOperationResponse describes contact mutation results.
 type ContactOperationResponse struct {
-	Data ContactOperationResult `json:"data,omitempty"`
+	Data *ContactOperationResult `json:"data,omitempty"`
 }
 
 // ContactOperationResult is returned by contact mutation endpoints.
@@ -90,7 +104,7 @@ func (client *Client) AddContact(ctx context.Context, input AddContactInput) (*C
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/add", input, &out); err != nil {
 		return nil, err
 	}
-	return &out.Data, nil
+	return out.Data, nil
 }
 
 // RemoveContact removes a contact by handle or contact id.
@@ -102,7 +116,7 @@ func (client *Client) RemoveContact(ctx context.Context, input RemoveContactInpu
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/remove", input, &out); err != nil {
 		return nil, err
 	}
-	return &out.Data, nil
+	return out.Data, nil
 }
 
 // ListContactRequests lists received and sent contact requests.
@@ -133,5 +147,5 @@ func (client *Client) RespondContactRequest(ctx context.Context, input RespondCo
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/requests/respond", input, &out); err != nil {
 		return nil, err
 	}
-	return &out.Data, nil
+	return out.Data, nil
 }

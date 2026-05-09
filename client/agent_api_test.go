@@ -84,7 +84,7 @@ func TestContextPeersContactsAndMemoriesEndpoints(t *testing.T) {
 			assertJSONField(t, req, "handle", "owner/agent")
 			return jsonResponse(http.StatusOK, `{"data":{"status":"removed"}}`), nil
 		case "/api/v1/agent/contacts/requests":
-			return jsonResponse(http.StatusOK, `{"data":{"received":[{"id":"req_1","status":"pending"}],"sent":[]},"metadata":{"page":2,"page_size":25}}`), nil
+			return jsonResponse(http.StatusOK, `{"data":{"received":[{"id":"req_1","status":"pending"}],"sent":[]},"metadata":{"page":2,"page_size":25,"received":{"total":1,"total_pages":1},"sent":{"total":0,"total_pages":0}}}`), nil
 		case "/api/v1/agent/contacts/requests/respond":
 			assertJSONFields(t, req, map[string]any{"action": "approve", "request_id": "req_1"})
 			return jsonResponse(http.StatusOK, `{"data":{"id":"req_1","status":"approved"}}`), nil
@@ -117,8 +117,12 @@ func TestContextPeersContactsAndMemoriesEndpoints(t *testing.T) {
 	if _, err := sdk.RemoveContact(context.Background(), client.RemoveContactInput{Handle: stringPtr("owner/agent")}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := sdk.ListContactRequests(context.Background(), &client.ListContactRequestsInput{Page: &page, PageSize: &pageSize, SentStatus: &sentStatus}); err != nil {
+	contactRequests, err := sdk.ListContactRequests(context.Background(), &client.ListContactRequestsInput{Page: &page, PageSize: &pageSize, SentStatus: &sentStatus})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if contactRequests.Metadata == nil || contactRequests.Metadata.Received.Total != 1 || contactRequests.Metadata.Sent.Total != 0 {
+		t.Fatalf("contact request metadata=%#v", contactRequests.Metadata)
 	}
 	if _, err := sdk.RespondContactRequest(context.Background(), client.RespondContactRequestInput{Action: "approve", RequestID: stringPtr("req_1")}); err != nil {
 		t.Fatal(err)
@@ -159,6 +163,35 @@ func TestContextPeersContactsAndMemoriesEndpoints(t *testing.T) {
 		if seen[i] != want[i] {
 			t.Fatalf("seen[%d]=%s want %s", i, seen[i], want[i])
 		}
+	}
+}
+
+func TestOptionalMutationDataResponses(t *testing.T) {
+	t.Parallel()
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/api/v1/agent/contacts/add", "/api/v1/agent/contacts/remove", "/api/v1/agent/contacts/requests/respond", "/api/v1/agent/memories/mem_1/supersede", "/api/v1/agent/memories/mem_1/archive":
+			return jsonResponse(http.StatusOK, `{}`), nil
+		default:
+			t.Fatalf("unexpected path %s", req.URL.String())
+			return nil, nil
+		}
+	})
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
+	if out, err := sdk.AddContact(context.Background(), client.AddContactInput{Handle: "owner/agent"}); err != nil || out != nil {
+		t.Fatalf("AddContact out=%#v err=%v", out, err)
+	}
+	if out, err := sdk.RemoveContact(context.Background(), client.RemoveContactInput{Handle: stringPtr("owner/agent")}); err != nil || out != nil {
+		t.Fatalf("RemoveContact out=%#v err=%v", out, err)
+	}
+	if out, err := sdk.RespondContactRequest(context.Background(), client.RespondContactRequestInput{Action: "approve", RequestID: stringPtr("req_1")}); err != nil || out != nil {
+		t.Fatalf("RespondContactRequest out=%#v err=%v", out, err)
+	}
+	if out, err := sdk.SupersedeMemory(context.Background(), "mem_1"); err != nil || out != nil {
+		t.Fatalf("SupersedeMemory out=%#v err=%v", out, err)
+	}
+	if out, err := sdk.ArchiveMemory(context.Background(), "mem_1"); err != nil || out != nil {
+		t.Fatalf("ArchiveMemory out=%#v err=%v", out, err)
 	}
 }
 
