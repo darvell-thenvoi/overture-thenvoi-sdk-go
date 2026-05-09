@@ -2,11 +2,11 @@
 
 Go SDK for Band/Thenvoi platform, planned and implemented end-to-end by [Overture](https://github.com/darvell-thenvoi/overture) agent swarms talking over Band rooms.
 
-This repository is the dogfood target for Overture: every change here was authored by an agent team (planner, builder, verifier) coordinated through Band, with human approval gates in the Overture UI. The SDK mirrors the surface of the official Python and TypeScript Thenvoi SDKs.
+This repository is the dogfood target for Overture: every change here was authored by an agent team coordinated through Band, with human approval gates in the Overture UI. The SDK mirrors the agent REST surface of the official TypeScript Thenvoi SDK generated from `@thenvoi/rest-client@0.0.113`.
 
 ## Status
 
-Bootstrap SDK with the REST client foundation in place. Endpoint-specific helpers, websocket support, and framework adapters will land in later focused PRs.
+REST client v1 with generated-contract-aligned helpers for agent identity, chat rooms, text messages, chat events, message processing status, participants, context, peers, contacts, and memories.
 
 ## REST client
 
@@ -16,26 +16,38 @@ package main
 import (
 	"context"
 	"log"
-	"net/http"
 
 	"github.com/darvell-thenvoi/overture-thenvoi-sdk-go/client"
 )
 
 func main() {
-	sdk := client.New(client.WithApiKey("thenvoi_api_key"))
+	sdk := client.New(client.WithApiKey("thenvoi_agent_api_key"))
 
-	var out map[string]any
-	if err := sdk.Do(context.Background(), http.MethodGet, "/v1/agents/me", nil, &out); err != nil {
+	agent, err := sdk.GetAgent(context.Background())
+	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println(agent.ID)
 }
 ```
 
-The default base URL is `https://platform.dev.thenvoi.com`. Requests send `Authorization: Bearer <api key>`, `Accept: application/json`, and a default SDK `User-Agent`.
+The default base URL is `https://app.thenvoi.com`. Requests send `X-API-Key`, `Accept: application/json`, and a default SDK `User-Agent`.
+
+## Agent REST helpers
+
+- `GetAgent` / `GetAgentMe`
+- `CreateChatRoom`, `GetChatRoom`, `ListChatRooms`
+- `SendChatMessage`, `CreateChatEvent`, `ListChatMessages`, `GetNextChatMessage`
+- `MarkChatMessageProcessing`, `MarkChatMessageProcessed`, `MarkChatMessageFailed`
+- `ListChatParticipants`, `AddChatParticipant`, `RemoveChatParticipant`
+- `GetChatContext`
+- `ListPeers`
+- `ListContacts`, `AddContact`, `RemoveContact`, `ListContactRequests`, `RespondContactRequest`
+- `ListMemories`, `CreateMemory`, `GetMemory`, `SupersedeMemory`, `ArchiveMemory`
 
 ## Layout
 
-- `client/` — REST client foundation.
+- `client/` — REST client and agent API helpers.
 - `framework/` — adapter abstractions matching the TS/Python framework adapter contract (planned).
 - `agents/` — built-in agent helpers (planned).
 - `internal/` — shared utilities, not part of the public API.

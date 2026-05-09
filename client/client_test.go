@@ -27,14 +27,17 @@ func TestDoDecodesJSONSuccessAndSetsHeaders(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("method = %s, want %s", r.Method, http.MethodPost)
 		}
-		if r.URL.String() != "https://api.test/v1/agents/me?include=profile" {
+		if r.URL.String() != "https://api.test/api/v1/agent/me?include=profile" {
 			t.Fatalf("url = %s", r.URL.String())
 		}
 		if got := r.Header.Get("Accept"); got != "application/json" {
 			t.Fatalf("accept = %s", got)
 		}
-		if got := r.Header.Get("Authorization"); got != "Bearer test-key" {
+		if got := r.Header.Get("Authorization"); got != "" {
 			t.Fatalf("authorization = %s", got)
+		}
+		if got := r.Header.Get("X-API-Key"); got != "test-key" {
+			t.Fatalf("x-api-key = %s", got)
 		}
 		if got := r.Header.Get("User-Agent"); got != "test-agent" {
 			t.Fatalf("user-agent = %s", got)
@@ -65,7 +68,7 @@ func TestDoDecodesJSONSuccessAndSetsHeaders(t *testing.T) {
 	err := sdk.Do(
 		context.Background(),
 		http.MethodPost,
-		"/v1/agents/me?include=profile",
+		"/api/v1/agent/me?include=profile",
 		requestBody{AgentID: "agent-123"},
 		&got,
 	)
@@ -84,7 +87,7 @@ func TestDoDoesNotSetContentTypeWhenBodyIsNil(t *testing.T) {
 		if got := r.Header.Get("Content-Type"); got != "" {
 			t.Fatalf("content-type = %s", got)
 		}
-		if r.URL.String() != "https://api.test/v1/check" {
+		if r.URL.String() != "https://api.test/api/v1/check" {
 			t.Fatalf("url = %s", r.URL.String())
 		}
 		return jsonResponse(http.StatusOK, `{"ok":true}`), nil
@@ -99,7 +102,7 @@ func TestDoDoesNotSetContentTypeWhenBodyIsNil(t *testing.T) {
 	var got struct {
 		OK bool `json:"ok"`
 	}
-	if err := sdk.Do(context.Background(), http.MethodGet, "v1/check", nil, &got); err != nil {
+	if err := sdk.Do(context.Background(), http.MethodGet, "api/v1/check", nil, &got); err != nil {
 		t.Fatalf("Do returned error: %v", err)
 	}
 	if !got.OK {
@@ -111,7 +114,7 @@ func TestDoUsesDefaultBaseURLAndUserAgent(t *testing.T) {
 	t.Parallel()
 
 	transport := roundTripFunc(func(r *http.Request) (*http.Response, error) {
-		if r.URL.String() != client.DefaultBaseURL+"/v1/check" {
+		if r.URL.String() != client.DefaultBaseURL+"/api/v1/check" {
 			t.Fatalf("url = %s", r.URL.String())
 		}
 		if got := r.Header.Get("User-Agent"); got != "overture-thenvoi-sdk-go/"+client.Version {
@@ -128,7 +131,7 @@ func TestDoUsesDefaultBaseURLAndUserAgent(t *testing.T) {
 	var got struct {
 		OK bool `json:"ok"`
 	}
-	if err := sdk.Do(context.Background(), http.MethodGet, "/v1/check", nil, &got); err != nil {
+	if err := sdk.Do(context.Background(), http.MethodGet, "/api/v1/check", nil, &got); err != nil {
 		t.Fatalf("Do returned error: %v", err)
 	}
 	if !got.OK {
@@ -150,7 +153,7 @@ func TestDoMissingApiKeyDoesNotCallNetwork(t *testing.T) {
 		client.WithHTTPClient(&http.Client{Transport: transport}),
 	)
 
-	err := sdk.Do(context.Background(), http.MethodGet, "/v1/check", nil, nil)
+	err := sdk.Do(context.Background(), http.MethodGet, "/api/v1/check", nil, nil)
 	if err == nil {
 		t.Fatal("Do returned nil error")
 	}
@@ -175,7 +178,7 @@ func TestDoHonorsContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := sdk.Do(ctx, http.MethodGet, "/v1/check", nil, nil)
+	err := sdk.Do(ctx, http.MethodGet, "/api/v1/check", nil, nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
@@ -196,7 +199,7 @@ func TestDoReturnsUnauthorizedApiError(t *testing.T) {
 		client.WithHTTPClient(&http.Client{Transport: transport}),
 	)
 
-	err := sdk.Do(context.Background(), http.MethodGet, "/v1/check", nil, nil)
+	err := sdk.Do(context.Background(), http.MethodGet, "/api/v1/check", nil, nil)
 	if !errors.Is(err, client.ErrUnauthorized) {
 		t.Fatalf("err = %v, want ErrUnauthorized", err)
 	}
@@ -228,7 +231,7 @@ func TestDoReturnsRateLimitedApiErrorWithRetryAfter(t *testing.T) {
 		client.WithHTTPClient(&http.Client{Transport: transport}),
 	)
 
-	err := sdk.Do(context.Background(), http.MethodGet, "/v1/check", nil, nil)
+	err := sdk.Do(context.Background(), http.MethodGet, "/api/v1/check", nil, nil)
 	if !errors.Is(err, client.ErrRateLimited) {
 		t.Fatalf("err = %v, want ErrRateLimited", err)
 	}
@@ -255,7 +258,7 @@ func TestDoReturnsServerApiErrorForNonJSONBody(t *testing.T) {
 		client.WithHTTPClient(&http.Client{Transport: transport}),
 	)
 
-	err := sdk.Do(context.Background(), http.MethodGet, "/v1/check", nil, nil)
+	err := sdk.Do(context.Background(), http.MethodGet, "/api/v1/check", nil, nil)
 	if !errors.Is(err, client.ErrServer) {
 		t.Fatalf("err = %v, want ErrServer", err)
 	}
@@ -288,7 +291,7 @@ func TestDoRejectsMalformedBaseURLAtRequestTime(t *testing.T) {
 
 	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("://bad-url"))
 
-	err := sdk.Do(context.Background(), http.MethodGet, "/v1/check", nil, nil)
+	err := sdk.Do(context.Background(), http.MethodGet, "/api/v1/check", nil, nil)
 	if err == nil {
 		t.Fatal("Do returned nil error")
 	}

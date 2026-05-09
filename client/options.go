@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	DefaultBaseURL = "https://platform.dev.thenvoi.com"
+	DefaultBaseURL = "https://app.thenvoi.com"
 	defaultTimeout = 30 * time.Second
 )
 
@@ -22,7 +22,7 @@ type Config struct {
 // Option configures a Client.
 type Option func(*Config)
 
-// WithApiKey configures the API key used for bearer authentication.
+// WithApiKey configures the API key used for agent API authentication.
 func WithApiKey(apiKey string) Option {
 	return func(config *Config) {
 		config.ApiKey = apiKey
