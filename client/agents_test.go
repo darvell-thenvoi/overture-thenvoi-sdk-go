@@ -9,7 +9,7 @@ import (
 	"github.com/darvell-thenvoi/overture-thenvoi-sdk-go/client"
 )
 
-func TestGetAgentMe(t *testing.T) {
+func TestGetAgent(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -40,10 +40,10 @@ func TestGetAgentMe(t *testing.T) {
 			assertResult: func(t *testing.T, out *client.AgentIdentity, err error) {
 				t.Helper()
 				if err != nil {
-					t.Fatalf("GetAgentMe returned error: %v", err)
+					t.Fatalf("GetAgent returned error: %v", err)
 				}
 				if out == nil {
-					t.Fatal("GetAgentMe returned nil identity")
+					t.Fatal("GetAgent returned nil identity")
 				}
 				if out.ID != "agent_123" {
 					t.Fatalf("id = %s", out.ID)
@@ -70,10 +70,10 @@ func TestGetAgentMe(t *testing.T) {
 			assertResult: func(t *testing.T, out *client.AgentIdentity, err error) {
 				t.Helper()
 				if err != nil {
-					t.Fatalf("GetAgentMe returned error: %v", err)
+					t.Fatalf("GetAgent returned error: %v", err)
 				}
 				if out == nil {
-					t.Fatal("GetAgentMe returned nil identity")
+					t.Fatal("GetAgent returned nil identity")
 				}
 				if out.Description != nil {
 					t.Fatalf("description = %#v, want nil", out.Description)
@@ -134,12 +134,46 @@ func TestGetAgentMe(t *testing.T) {
 				client.WithHTTPClient(&http.Client{Transport: transport}),
 			)
 
-			out, err := sdk.GetAgentMe(context.Background())
+			out, err := sdk.GetAgent(context.Background())
 			tt.assertResult(t, out, err)
 
 			if tt.apiKey == "" && called {
 				t.Fatal("transport was called for missing api key")
 			}
 		})
+	}
+}
+
+func TestGetAgentMe(t *testing.T) {
+	t.Parallel()
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodGet {
+			t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
+		}
+		if req.URL.String() != "https://api.test/v1/agents/me" {
+			t.Fatalf("url = %s", req.URL.String())
+		}
+		return jsonResponse(http.StatusOK, `{"id":"agent_789","name":"Compat","description":"ok"}`), nil
+	})
+
+	sdk := client.New(
+		client.WithApiKey("test-key"),
+		client.WithBaseURL("https://api.test"),
+		client.WithHTTPClient(&http.Client{Transport: transport}),
+	)
+
+	out, err := sdk.GetAgentMe(context.Background())
+	if err != nil {
+		t.Fatalf("GetAgentMe returned error: %v", err)
+	}
+	if out == nil {
+		t.Fatal("GetAgentMe returned nil identity")
+	}
+	if out.ID != "agent_789" || out.Name != "Compat" {
+		t.Fatalf("identity = %#v", out)
+	}
+	if out.Description == nil || *out.Description != "ok" {
+		t.Fatalf("description = %#v", out.Description)
 	}
 }
