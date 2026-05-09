@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// Client is the REST client for the Thenvoi platform API.
+// Client is the REST client for the Band/Thenvoi platform API.
 type Client struct {
 	config Config
 }
@@ -40,31 +40,36 @@ func New(opts ...Option) *Client {
 
 // Do sends an HTTP request and decodes a successful JSON response into out.
 func (client *Client) Do(ctx context.Context, method string, path string, body any, out any) error {
+	_, err := client.do(ctx, method, path, body, out)
+	return err
+}
+
+func (client *Client) do(ctx context.Context, method string, path string, body any, out any) (int, error) {
 	if client.config.ApiKey == "" {
-		return errors.New("thenvoi: api key is required")
+		return 0, errors.New("thenvoi: api key is required")
 	}
 
 	requestURL, err := client.requestURL(path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var requestBody io.Reader
 	if body != nil {
 		var buffer bytes.Buffer
 		if err := json.NewEncoder(&buffer).Encode(body); err != nil {
-			return err
+			return 0, err
 		}
 		requestBody = &buffer
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, requestURL, requestBody)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+client.config.ApiKey)
+	req.Header.Set("X-API-Key", client.config.ApiKey)
 	if client.config.UserAgent != "" {
 		req.Header.Set("User-Agent", client.config.UserAgent)
 	}
@@ -74,19 +79,19 @@ func (client *Client) Do(ctx context.Context, method string, path string, body a
 
 	resp, err := client.config.HTTPClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return newAPIError(resp)
+		return resp.StatusCode, newAPIError(resp)
 	}
 
-	if out == nil {
-		return nil
+	if out == nil || resp.StatusCode == http.StatusNoContent {
+		return resp.StatusCode, nil
 	}
 
-	return json.NewDecoder(resp.Body).Decode(out)
+	return resp.StatusCode, json.NewDecoder(resp.Body).Decode(out)
 }
 
 func (client *Client) requestURL(path string) (string, error) {

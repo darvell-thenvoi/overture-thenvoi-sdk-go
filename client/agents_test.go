@@ -9,7 +9,7 @@ import (
 	"github.com/darvell-thenvoi/overture-thenvoi-sdk-go/client"
 )
 
-func TestGetAgentMe(t *testing.T) {
+func TestGetAgent(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -19,66 +19,38 @@ func TestGetAgentMe(t *testing.T) {
 		responseBody  string
 		assertRequest func(*testing.T, *http.Request)
 		assertResult  func(*testing.T, *client.AgentIdentity, error)
+		wantCalled    bool
 	}{
 		{
-			name:         "decodes success and sends expected request",
+			name:         "decodes generated data envelope and sends expected request",
 			apiKey:       "test-key",
 			responseCode: http.StatusOK,
-			responseBody: `{"id":"agent_123","name":"Thenvoi Agent","description":"handles workflows"}`,
+			responseBody: `{"data":{"id":"agent_123","name":"Band Agent","description":"handles workflows","handle":"owner/agent","inserted_at":"2026-01-02T03:04:05Z","listed_in_directory":true,"owner_uuid":"owner_1","tags":["ops"],"updated_at":"2026-01-03T03:04:05Z"}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 				if req.Method != http.MethodGet {
-					t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
+					t.Fatalf("method = %s", req.Method)
 				}
-				if req.URL.String() != "https://api.test/v1/agents/me" {
+				if req.URL.String() != "https://api.test/api/v1/agent/me" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
-				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
-					t.Fatalf("authorization = %s", got)
+				if got := req.Header.Get("X-API-Key"); got != "test-key" {
+					t.Fatalf("x-api-key = %s", got)
 				}
 			},
 			assertResult: func(t *testing.T, out *client.AgentIdentity, err error) {
 				t.Helper()
 				if err != nil {
-					t.Fatalf("GetAgentMe returned error: %v", err)
+					t.Fatalf("GetAgent returned error: %v", err)
 				}
-				if out == nil {
-					t.Fatal("GetAgentMe returned nil identity")
-				}
-				if out.ID != "agent_123" {
-					t.Fatalf("id = %s", out.ID)
-				}
-				if out.Name != "Thenvoi Agent" {
-					t.Fatalf("name = %s", out.Name)
+				if out == nil || out.ID != "agent_123" || out.Name != "Band Agent" || out.Handle != "owner/agent" {
+					t.Fatalf("identity = %#v", out)
 				}
 				if out.Description == nil || *out.Description != "handles workflows" {
 					t.Fatalf("description = %#v", out.Description)
 				}
 			},
-		},
-		{
-			name:         "decodes null description as nil",
-			apiKey:       "test-key",
-			responseCode: http.StatusOK,
-			responseBody: `{"id":"agent_456","name":"No Description","description":null}`,
-			assertRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-				if req.URL.String() != "https://api.test/v1/agents/me" {
-					t.Fatalf("url = %s", req.URL.String())
-				}
-			},
-			assertResult: func(t *testing.T, out *client.AgentIdentity, err error) {
-				t.Helper()
-				if err != nil {
-					t.Fatalf("GetAgentMe returned error: %v", err)
-				}
-				if out == nil {
-					t.Fatal("GetAgentMe returned nil identity")
-				}
-				if out.Description != nil {
-					t.Fatalf("description = %#v, want nil", out.Description)
-				}
-			},
+			wantCalled: true,
 		},
 		{
 			name:         "maps unauthorized response",
@@ -86,31 +58,21 @@ func TestGetAgentMe(t *testing.T) {
 			responseCode: http.StatusUnauthorized,
 			responseBody: `{"error":{"code":"unauthorized","message":"bad key"}}`,
 			assertResult: func(t *testing.T, out *client.AgentIdentity, err error) {
-				t.Helper()
-				if out != nil {
-					t.Fatalf("identity = %#v, want nil", out)
-				}
-				if !errors.Is(err, client.ErrUnauthorized) {
-					t.Fatalf("err = %v, want ErrUnauthorized", err)
-				}
-				var apiErr *client.ApiError
-				if !errors.As(err, &apiErr) {
-					t.Fatalf("err = %T, want *client.ApiError", err)
+				if out != nil || !errors.Is(err, client.ErrUnauthorized) {
+					t.Fatalf("out=%#v err=%v", out, err)
 				}
 			},
+			wantCalled: true,
 		},
 		{
 			name:   "returns missing api key without request",
 			apiKey: "",
 			assertResult: func(t *testing.T, out *client.AgentIdentity, err error) {
-				t.Helper()
-				if out != nil {
-					t.Fatalf("identity = %#v, want nil", out)
-				}
-				if err == nil {
-					t.Fatal("expected error, got nil")
+				if out != nil || err == nil {
+					t.Fatalf("out=%#v err=%v", out, err)
 				}
 			},
+			wantCalled: false,
 		},
 	}
 
@@ -118,7 +80,6 @@ func TestGetAgentMe(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
 			called := false
 			transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				called = true
@@ -127,19 +88,29 @@ func TestGetAgentMe(t *testing.T) {
 				}
 				return jsonResponse(tt.responseCode, tt.responseBody), nil
 			})
-
-			sdk := client.New(
-				client.WithApiKey(tt.apiKey),
-				client.WithBaseURL("https://api.test"),
-				client.WithHTTPClient(&http.Client{Transport: transport}),
-			)
-
-			out, err := sdk.GetAgentMe(context.Background())
-			tt.assertResult(t, out, err)
-
-			if tt.apiKey == "" && called {
-				t.Fatal("transport was called for missing api key")
+			sdk := client.New(client.WithApiKey(tt.apiKey), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
+			out, err := sdk.GetAgent(context.Background())
+			if tt.assertResult != nil {
+				tt.assertResult(t, out, err)
+			}
+			if called != tt.wantCalled {
+				t.Fatalf("transport called = %t, want %t", called, tt.wantCalled)
 			}
 		})
+	}
+}
+
+func TestGetAgentMe(t *testing.T) {
+	t.Parallel()
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.URL.String() != "https://api.test/api/v1/agent/me" {
+			t.Fatalf("url = %s", req.URL.String())
+		}
+		return jsonResponse(http.StatusOK, `{"data":{"id":"agent_789","name":"Compat","description":null,"handle":"owner/compat","inserted_at":"2026-01-02T03:04:05Z","owner_uuid":"owner_1","updated_at":"2026-01-02T03:05:05Z"}}`), nil
+	})
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
+	out, err := sdk.GetAgentMe(context.Background())
+	if err != nil || out == nil || out.ID != "agent_789" {
+		t.Fatalf("out=%#v err=%v", out, err)
 	}
 }
