@@ -204,3 +204,36 @@ func TestListChatMessages(t *testing.T) {
 		t.Fatalf("out=%#v err=%v", out, err)
 	}
 }
+
+func TestDeleteChatMessageV2(t *testing.T) {
+	t.Parallel()
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		if req.Method != http.MethodDelete {
+			t.Fatalf("method=%s", req.Method)
+		}
+		if req.URL.String() != "https://api.test/api/v2/chats/chat%2F1/messages/msg%2F1" {
+			t.Fatalf("url=%s", req.URL.String())
+		}
+		return jsonResponse(http.StatusNoContent, ``), nil
+	})
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: transport}))
+	if err := sdk.DeleteChatMessage(context.Background(), "chat/1", "msg/1"); err != nil {
+		t.Fatalf("DeleteChatMessage returned error: %v", err)
+	}
+}
+
+func TestDeleteChatMessageV2ValidationAndAPIErrors(t *testing.T) {
+	t.Parallel()
+	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusUnauthorized, `{"error":{"code":"unauthorized","message":"bad key"}}`), nil
+	})}))
+	if err := sdk.DeleteChatMessage(context.Background(), "", "msg_1"); err == nil || err.Error() != "thenvoi: chat id is required" {
+		t.Fatalf("chat validation err=%v", err)
+	}
+	if err := sdk.DeleteChatMessage(context.Background(), "chat_1", ""); err == nil || err.Error() != "thenvoi: message id is required" {
+		t.Fatalf("message validation err=%v", err)
+	}
+	if err := sdk.DeleteChatMessage(context.Background(), "chat_1", "msg_1"); !errors.Is(err, client.ErrUnauthorized) {
+		t.Fatalf("DeleteChatMessage err=%v", err)
+	}
+}

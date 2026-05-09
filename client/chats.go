@@ -37,6 +37,13 @@ type CreateChatRoomInput struct {
 	TaskID *string `json:"task_id,omitempty"`
 }
 
+// UpdateChatRoomInput contains fields for updating an API v2 chat room.
+type UpdateChatRoomInput struct {
+	Title    string         `json:"title,omitempty"`
+	Status   string         `json:"status,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
+}
+
 // ListChatRooms lists chat rooms where the current agent is a participant.
 func (client *Client) ListChatRooms(ctx context.Context, input *ListChatRoomsInput) (*ListChatRoomsResponse, error) {
 	values := url.Values{}
@@ -92,4 +99,28 @@ func (client *Client) CreateChatRoom(ctx context.Context, input CreateChatRoomIn
 		return nil, err
 	}
 	return &out.Data, nil
+}
+
+// UpdateChatRoom updates an API v2 chat room.
+func (client *Client) UpdateChatRoom(ctx context.Context, chatID string, input UpdateChatRoomInput) (*ChatRoom, error) {
+	if chatID == "" {
+		return nil, errors.New("thenvoi: chat id is required")
+	}
+
+	var out struct {
+		Data ChatRoom `json:"data"`
+	}
+	path := "/api/v2/chats/" + url.PathEscape(chatID)
+	if err := client.Do(ctx, http.MethodPut, path, map[string]any{"chat": input}, &out); err != nil {
+		return nil, err
+	}
+	return &out.Data, nil
+}
+
+// DeleteChatRoom deletes an API v2 chat room.
+func (client *Client) DeleteChatRoom(ctx context.Context, chatID string) error {
+	if chatID == "" {
+		return errors.New("thenvoi: chat id is required")
+	}
+	return client.Do(ctx, http.MethodDelete, "/api/v2/chats/"+url.PathEscape(chatID), nil, nil)
 }

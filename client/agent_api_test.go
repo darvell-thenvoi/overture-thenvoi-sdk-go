@@ -220,9 +220,7 @@ func assertJSONField(t *testing.T, req *http.Request, key string, want any) {
 func assertJSONFields(t *testing.T, req *http.Request, want map[string]any) {
 	t.Helper()
 	var payload map[string]any
-	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode request body: %v", err)
-	}
+	decodeJSONBody(t, req, &payload)
 	for key, value := range want {
 		if payload[key] != value {
 			t.Fatalf("payload[%s]=%#v want %#v", key, payload[key], value)
@@ -230,12 +228,17 @@ func assertJSONFields(t *testing.T, req *http.Request, want map[string]any) {
 	}
 }
 
+func decodeJSONBody(t *testing.T, req *http.Request, target any) {
+	t.Helper()
+	if err := json.NewDecoder(req.Body).Decode(target); err != nil {
+		t.Fatalf("decode request body: %v", err)
+	}
+}
+
 func assertNestedJSONFields(t *testing.T, req *http.Request, outer string, want map[string]any) {
 	t.Helper()
 	var payload map[string]map[string]any
-	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode request body: %v", err)
-	}
+	decodeJSONBody(t, req, &payload)
 	for key, value := range want {
 		if payload[outer][key] != value {
 			t.Fatalf("payload[%s][%s]=%#v want %#v", outer, key, payload[outer][key], value)
