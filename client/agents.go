@@ -15,7 +15,7 @@ type AgentIdentity struct {
 // GetAgent fetches the current authenticated agent identity.
 func (client *Client) GetAgent(ctx context.Context) (*AgentIdentity, error) {
 	var out AgentIdentity
-	if err := client.Do(ctx, http.MethodGet, "/v1/agents/me", nil, &out); err != nil {
+	if err := client.Do(ctx, http.MethodGet, "/api/v1/agent/me", nil, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil

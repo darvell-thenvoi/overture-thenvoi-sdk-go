@@ -30,7 +30,7 @@ func TestGetAgent(t *testing.T) {
 				if req.Method != http.MethodGet {
 					t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
 				}
-				if req.URL.String() != "https://api.test/v1/agents/me" {
+				if req.URL.String() != "https://api.test/api/v1/agent/me" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
@@ -63,7 +63,7 @@ func TestGetAgent(t *testing.T) {
 			responseBody: `{"id":"agent_456","name":"No Description","description":null}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
-				if req.URL.String() != "https://api.test/v1/agents/me" {
+				if req.URL.String() != "https://api.test/api/v1/agent/me" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 			},
@@ -151,7 +151,7 @@ func TestGetAgentMe(t *testing.T) {
 		if req.Method != http.MethodGet {
 			t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
 		}
-		if req.URL.String() != "https://api.test/v1/agents/me" {
+		if req.URL.String() != "https://api.test/api/v1/agent/me" {
 			t.Fatalf("url = %s", req.URL.String())
 		}
 		return jsonResponse(http.StatusOK, `{"id":"agent_789","name":"Compat","description":"ok"}`), nil
