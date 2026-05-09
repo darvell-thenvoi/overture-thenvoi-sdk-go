@@ -9,11 +9,11 @@ import (
 
 // ChatRoom describes a chat room returned by the platform.
 type ChatRoom struct {
-	ID          string  `json:"id"`
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-	Type        *string `json:"type,omitempty"`
-	Status      *string `json:"status,omitempty"`
+	ID         string  `json:"id"`
+	InsertedAt string  `json:"inserted_at"`
+	TaskID     *string `json:"task_id,omitempty"`
+	Title      *string `json:"title,omitempty"`
+	UpdatedAt  string  `json:"updated_at"`
 }
 
 // GetChatRoom fetches a chat room by ID.
@@ -28,8 +28,7 @@ func (client *Client) GetChatRoom(ctx context.Context, chatID string) (*ChatRoom
 		Data ChatRoom `json:"data"`
 	}
 
-	err := client.Do(ctx, http.MethodGet, "/api/v1/agent/chats/"+escapedChatID, nil, &out)
-	if err != nil {
+	if err := client.Do(ctx, http.MethodGet, "/v1/chats/"+escapedChatID, nil, &out); err != nil {
 		return nil, err
 	}
 

@@ -15,6 +15,7 @@ func TestGetChatRoom(t *testing.T) {
 	tests := []struct {
 		name          string
 		chatID        string
+		apiKey        string
 		responseCode  int
 		responseBody  string
 		assertRequest func(*testing.T, *http.Request)
@@ -22,20 +23,21 @@ func TestGetChatRoom(t *testing.T) {
 		wantCalled    bool
 	}{
 		{
-			name:         "decodes success response",
+			name:         "decodes success and sends expected request",
 			chatID:       "chat_123",
+			apiKey:       "test-key",
 			responseCode: http.StatusOK,
-			responseBody: `{"data":{"id":"chat_123","name":"General","description":"Shared channel","type":"group","status":"active"}}`,
+			responseBody: `{"data":{"id":"chat_123","inserted_at":"2026-01-02T03:04:05Z","task_id":"task_123","title":"Daily Standup","updated_at":"2026-01-02T03:06:05Z"}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 				if req.Method != http.MethodGet {
 					t.Fatalf("method = %s, want %s", req.Method, http.MethodGet)
 				}
-				if req.URL.String() != "https://api.test/api/v1/agent/chats/chat_123" {
+				if req.URL.String() != "https://api.test/v1/chats/chat_123" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
-				if got := req.Header.Get("X-API-Key"); got != "test-key" {
-					t.Fatalf("x-api-key = %s", got)
+				if got := req.Header.Get("Authorization"); got != "Bearer test-key" {
+					t.Fatalf("authorization = %s", got)
 				}
 			},
 			assertResult: func(t *testing.T, out *client.ChatRoom, err error) {
@@ -49,26 +51,27 @@ func TestGetChatRoom(t *testing.T) {
 				if out.ID != "chat_123" {
 					t.Fatalf("id = %s", out.ID)
 				}
-				if out.Name != "General" {
-					t.Fatalf("name = %s", out.Name)
+				if out.InsertedAt != "2026-01-02T03:04:05Z" {
+					t.Fatalf("inserted_at = %s", out.InsertedAt)
 				}
-				if out.Description == nil || *out.Description != "Shared channel" {
-					t.Fatalf("description = %#v", out.Description)
+				if out.TaskID == nil || *out.TaskID != "task_123" {
+					t.Fatalf("task_id = %#v", out.TaskID)
 				}
-				if out.Type == nil || *out.Type != "group" {
-					t.Fatalf("type = %#v", out.Type)
+				if out.Title == nil || *out.Title != "Daily Standup" {
+					t.Fatalf("title = %#v", out.Title)
 				}
-				if out.Status == nil || *out.Status != "active" {
-					t.Fatalf("status = %#v", out.Status)
+				if out.UpdatedAt != "2026-01-02T03:06:05Z" {
+					t.Fatalf("updated_at = %s", out.UpdatedAt)
 				}
 			},
 			wantCalled: true,
 		},
 		{
-			name:         "decodes omitted optional fields",
+			name:         "decodes optional fields when omitted",
 			chatID:       "chat_456",
+			apiKey:       "test-key",
 			responseCode: http.StatusOK,
-			responseBody: `{"data":{"id":"chat_456","name":"No Extras"}}`,
+			responseBody: `{"data":{"id":"chat_456","inserted_at":"2026-02-02T03:04:05Z","updated_at":"2026-02-02T03:06:05Z"}}`,
 			assertResult: func(t *testing.T, out *client.ChatRoom, err error) {
 				t.Helper()
 				if err != nil {
@@ -77,14 +80,11 @@ func TestGetChatRoom(t *testing.T) {
 				if out == nil {
 					t.Fatal("GetChatRoom returned nil chat room")
 				}
-				if out.Description != nil {
-					t.Fatalf("description = %#v, want nil", out.Description)
+				if out.TaskID != nil {
+					t.Fatalf("task_id = %#v, want nil", out.TaskID)
 				}
-				if out.Type != nil {
-					t.Fatalf("type = %#v, want nil", out.Type)
-				}
-				if out.Status != nil {
-					t.Fatalf("status = %#v, want nil", out.Status)
+				if out.Title != nil {
+					t.Fatalf("title = %#v, want nil", out.Title)
 				}
 			},
 			wantCalled: true,
@@ -92,11 +92,12 @@ func TestGetChatRoom(t *testing.T) {
 		{
 			name:         "escapes chat id in request path",
 			chatID:       "a/b",
+			apiKey:       "test-key",
 			responseCode: http.StatusOK,
-			responseBody: `{"data":{"id":"a/b","name":"Escaped"}}`,
+			responseBody: `{"data":{"id":"a/b","inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-02T03:06:05Z"}}`,
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
-				if req.URL.String() != "https://api.test/api/v1/agent/chats/a%2Fb" {
+				if req.URL.String() != "https://api.test/v1/chats/a%2Fb" {
 					t.Fatalf("url = %s", req.URL.String())
 				}
 			},
@@ -114,6 +115,7 @@ func TestGetChatRoom(t *testing.T) {
 		{
 			name:   "returns validation error for empty chat id without network",
 			chatID: "",
+			apiKey: "test-key",
 			assertResult: func(t *testing.T, out *client.ChatRoom, err error) {
 				t.Helper()
 				if out != nil {
@@ -131,6 +133,7 @@ func TestGetChatRoom(t *testing.T) {
 		{
 			name:         "maps unauthorized response",
 			chatID:       "chat_123",
+			apiKey:       "test-key",
 			responseCode: http.StatusUnauthorized,
 			responseBody: `{"error":{"code":"unauthorized","message":"bad key"}}`,
 			assertResult: func(t *testing.T, out *client.ChatRoom, err error) {
@@ -165,15 +168,13 @@ func TestGetChatRoom(t *testing.T) {
 			})
 
 			sdk := client.New(
-				client.WithApiKey("test-key"),
+				client.WithApiKey(tt.apiKey),
 				client.WithBaseURL("https://api.test"),
 				client.WithHTTPClient(&http.Client{Transport: transport}),
 			)
 
 			out, err := sdk.GetChatRoom(context.Background(), tt.chatID)
-			if tt.assertResult != nil {
-				tt.assertResult(t, out, err)
-			}
+			tt.assertResult(t, out, err)
 
 			if called != tt.wantCalled {
 				t.Fatalf("transport called = %t, want %t", called, tt.wantCalled)
