@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -117,6 +118,29 @@ func TestDefaultAgentToolsCapabilitiesReturnsEnabledValue(t *testing.T) {
 	got := core.DefaultAgentToolsCapabilities()
 	if !got.Peers || !got.Contacts || !got.Memory {
 		t.Fatalf("capabilities = %+v", got)
+	}
+}
+
+func TestContactRequestsResultUsesRequestRecordShapes(t *testing.T) {
+	t.Parallel()
+
+	data := []byte(`{"received":[{"id":"req-1","status":"pending","message":"hello","inserted_at":"2026-01-02T03:04:05Z","from_handle":"@agent","from_name":"Agent"}],"sent":[{"id":"req-2","status":"accepted","message":"hi","inserted_at":"2026-01-03T03:04:05Z","to_handle":"@user","to_name":"User"}],"metadata":{"page":1}}`)
+
+	var got core.ContactRequestsResult
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("Unmarshal returned error: %v", err)
+	}
+	if len(got.Received) != 1 || got.Received[0].Status == nil || *got.Received[0].Status != "pending" {
+		t.Fatalf("received status = %+v", got.Received)
+	}
+	if got.Received[0].Message == nil || *got.Received[0].Message != "hello" {
+		t.Fatalf("received message = %+v", got.Received)
+	}
+	if got.Received[0].FromHandle == nil || *got.Received[0].FromHandle != "@agent" {
+		t.Fatalf("from handle = %+v", got.Received)
+	}
+	if len(got.Sent) != 1 || got.Sent[0].ToName == nil || *got.Sent[0].ToName != "User" {
+		t.Fatalf("sent to name = %+v", got.Sent)
 	}
 }
 

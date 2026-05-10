@@ -64,6 +64,25 @@ type ContactRecord struct {
 	InsertedAt  *string `json:"inserted_at,omitempty"`
 }
 
+type ContactRequestRecord struct {
+	ID         *string `json:"id,omitempty"`
+	Status     *string `json:"status,omitempty"`
+	Message    *string `json:"message,omitempty"`
+	InsertedAt *string `json:"inserted_at,omitempty"`
+}
+
+type ReceivedContactRequestRecord struct {
+	ContactRequestRecord
+	FromHandle *string `json:"from_handle,omitempty"`
+	FromName   *string `json:"from_name,omitempty"`
+}
+
+type SentContactRequestRecord struct {
+	ContactRequestRecord
+	ToHandle *string `json:"to_handle,omitempty"`
+	ToName   *string `json:"to_name,omitempty"`
+}
+
 type ContactRequestAction string
 
 const (
@@ -73,9 +92,9 @@ const (
 )
 
 type ContactRequestsResult struct {
-	Received []ContactRecord `json:"received"`
-	Sent     []ContactRecord `json:"sent"`
-	Metadata Metadata        `json:"metadata,omitempty"`
+	Received []ReceivedContactRequestRecord `json:"received"`
+	Sent     []SentContactRequestRecord     `json:"sent"`
+	Metadata Metadata                       `json:"metadata,omitempty"`
 }
 
 type ListContactsArgs struct {
