@@ -1,506 +1,481 @@
-# Plan: Tool Management Client Surface
+# Plan: Core SDK Contracts, Errors, and Generic Adapter
 
 ## Summary
-Add the missing Band Go SDK tool-management client surface so callers can create, read, update, delete, list, assign, list assigned, and remove tools through public `Client` methods. Done means `client/tools.go` exports the eleven required methods with contract-shaped Go request/response types, `client/tools_test.go` covers paths, HTTP methods, JSON bodies, and 4xx propagation, and the validation commands pass. Implementation waits for human approval after this planning stage.
+Add the foundational Go SDK packages that later runtime and adapter work orders can import. Done means `core` exposes the DTOs, history provider, protocols, typed errors, logger, and tool executor helper types named in the work order; `adapters` exposes `GenericAdapter` and `GenericAdapterHandler`; tests prove error wrapping, history conversion, adapter lifecycle forwarding, logger no-op behavior, and tool executor error helpers.
 
 ## Codebase Context
-Existing client methods live in small files by surface area and all call `Client.Do`; see `client/chats.go:28`, `client/chats.go:42`, `client/chats.go:57`, `client/contacts.go:86`, `client/contacts.go:99`, and `client/memories.go:77`. Path identifiers are escaped with `url.PathEscape` before being appended, as in `client/chats.go:50`, `client/memories.go:110`, and `client/participants.go:62`.
+This repo currently contains only the `client` package plus docs. `go.mod:1` declares module `github.com/darvell-thenvoi/overture-thenvoi-sdk-go`, so new packages should import each other through that module path when cross-package imports are needed.
 
-`Client.Do` builds the request, sets `Accept`, `X-API-Key`, optional `User-Agent`, JSON `Content-Type`, decodes 2xx JSON responses, skips decode for `204 No Content`, and maps non-2xx responses through `newAPIError`; see `client/client.go:42` and `client/client.go:47`.
+Existing DTO style uses exported Go structs with JSON tags and pointer fields for optional API values, for example `client/types.go:9` and `client/types.go:17`. Existing tests are package-level Go tests with standard `testing` and `httptest`/fake helpers rather than external assertion libraries, as seen in `client/client_test.go:303` and `client/chats_test.go:17`.
 
-Pagination helpers already exist in `client/types.go:9`, `client/types.go:17`, `client/types.go:22`, and `client/types.go:31`. Existing endpoint tests use `roundTripFunc` fakes from `client/client_test.go:303` and verify exact methods, URLs, response decoding, and error propagation, as in `client/chats_test.go:17`, `client/chats_test.go:119`, `client/agents_test.go:84`, and `client/messages_test.go:135`.
-
-Local grep gate result: no existing local symbols named `ListTools`, `CreateTool`, `GetTool`, `UpdateTool`, `DeleteTool`, `AssignToolsToAgent`, `ListAgentTools`, `RemoveToolFromAgent`, `ListMyTools`, `AssignToolsToMyself`, `RemoveToolFromMyself`, `ToolListItem`, `AssignedTool`, `AssignedToolDetail`, `ConnectionConfig`, `AuthConfig`, `AssignToolsInput`, `ToolPagination`, `ListToolsResponse`, or `Tool`.
+Local symbol grep found no existing `FrameworkAdapter`, `AdapterToolsProtocol`, `ThenvoiSdkError`, `GenericAdapter`, `HistoryProvider`, `ToolOperationResult`, `MentionReference`, `PaginationMetadataLike`, `PaginatedList`, `AgentToolsCapabilities`, or `NoopLogger` definitions in this lease, so the new public symbols will not duplicate a shipped local surface.
 
 ## Upstream Contract Citations
-Both upstream tool contracts publish these operations under `/api/v2`, while the path items themselves are bare paths such as `/tools` and `/agents/{agent_id}/tools`:
+The work mirrors the TypeScript SDK public contracts under `/Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src`. `overture_read_upstream_contract` could not read these files because this work order has no configured contract roots, so citations below come from direct local reads with line numbers.
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/thenvoi-api-v2-openapi.yaml:82-86
-servers:
-  - url: https://api.thenvoi.com/api/v2
-    description: Production server
-  - url: https://staging-api.thenvoi.com/api/v2
-    description: Staging server
+DTO mapping:
+
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/dtos.ts:1-31
+export interface MetadataMap {
+  [key: string]: unknown;
+}
+
+export interface ToolOperationResult {
+  ok?: boolean;
+  status?: string;
+  [key: string]: unknown;
+}
+
+export interface MentionReference {
+  id: string;
+  handle?: string;
+  name?: string;
+  username?: string;
+}
+
+export type MentionInput = string[] | MentionReference[];
+
+export interface PaginationMetadataLike {
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
+  totalCount?: number;
+  [key: string]: unknown;
+}
+
+export interface PaginatedList<TItem = MetadataMap> {
+  data: TItem[];
+  metadata?: PaginationMetadataLike;
+}
 ```
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/tool-api-openapi.yaml:82-86
-servers:
-  - url: https://api.thenvoi.com/api/v2
-    description: Production server
-  - url: https://staging-api.thenvoi.com/api/v2
-    description: Staging server
+Record DTO mapping:
+
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/dtos.ts:33-59
+export interface ParticipantRecord {
+  id: string;
+  name: string;
+  type: string;
+  handle?: string | null;
+  role?: string;
+}
+
+export interface PeerRecord {
+  id?: string;
+  name?: string;
+  type?: string;
+  handle?: string | null;
+  description?: string | null;
+}
+
+// Wire DTOs intentionally preserve API snake_case field names.
+export interface WireContactRecord {
+  id?: string;
+  handle?: string;
+  name?: string | null;
+  type?: string;
+  description?: string | null;
+  is_external?: boolean | null;
+  inserted_at?: string;
+}
+export type ContactRecord = WireContactRecord;
 ```
 
-Endpoint operations from `thenvoi-api-v2-openapi.yaml`:
+Contact, memory, and tool schema DTO mapping:
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/thenvoi-api-v2-openapi.yaml:339-445
-/agents/me/tools:
-  get:
-    operationId: listMyTools
-    parameters:
-      - $ref: '#/components/parameters/PageParam'
-      - $ref: '#/components/parameters/PerPageParam'
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/AssignedToolDetail'
-            pagination:
-              $ref: '#/components/schemas/Pagination'
-  post:
-    operationId: assignToolsToMyself
-    requestBody:
-      required: true
-      schema:
-        required:
-          - tool_ids
-        properties:
-          tool_ids:
-            type: array
-            items:
-              type: string
-              format: uuid
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              type: object
-              properties:
-                assigned_tools:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      name:
-                        type: string
-/agents/me/tools/{tool_id}:
-  delete:
-    operationId: removeToolFromMyself
-    parameters:
-      - $ref: '#/components/parameters/ToolIdParam'
-    responses:
-      '204':
-        description: Tool successfully removed
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/dtos.ts:81-172
+export interface WireContactRequestsResult {
+  received: WireReceivedContactRequestRecord[];
+  sent: WireSentContactRequestRecord[];
+  metadata?: MetadataMap;
+}
+export type ContactRequestsResult = WireContactRequestsResult;
+
+export type ContactRequestAction = "approve" | "reject" | "cancel";
+
+export interface ListContactsArgs {
+  page?: number;
+  pageSize?: number;
+}
+
+export interface AddContactArgs {
+  handle: string;
+  message?: string;
+}
+
+export type RemoveContactArgs =
+  | { target: "handle"; handle: string }
+  | { target: "contactId"; contactId: string };
+
+export interface ListContactRequestsArgs {
+  page?: number;
+  pageSize?: number;
+  sentStatus?: string;
+}
+
+export type RespondContactRequestArgs =
+  | { action: ContactRequestAction; target: "handle"; handle: string }
+  | { action: ContactRequestAction; target: "requestId"; requestId: string };
+
+export interface WireMemoryRecord {
+  id?: string;
+  content?: string;
+  system?: string;
+  type?: string;
+  segment?: string;
+  thought?: string | null;
+  subject_id?: string | null;
+  source_agent_id?: string | null;
+  organization_id?: string | null;
+  scope?: string;
+  status?: string;
+  metadata?: MetadataMap | null;
+  inserted_at?: string | null;
+}
+export type MemoryRecord = WireMemoryRecord;
+
+/** Tool schema as returned by getToolSchemas(). Format depends on the requested format ("openai" or "anthropic"). */
+export interface ToolSchemaRecord {
+  [key: string]: unknown;
+}
 ```
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/thenvoi-api-v2-openapi.yaml:868-1105
-/agents/{agent_id}/tools:
-  post:
-    operationId: assignToolsToAgent
-    parameters:
-      - $ref: '#/components/parameters/AgentIdParam'
-    requestBody:
-      $ref: '#/components/requestBodies/AssignTools'
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              properties:
-                agent_id:
-                  type: string
-                  format: uuid
-                assigned_tools:
-                  type: array
-                  items:
-                    properties:
-                      id:
-                        type: string
-                        format: uuid
-                      name:
-                        type: string
-  get:
-    operationId: listAgentTools
-    parameters:
-      - $ref: '#/components/parameters/AgentIdParam'
-      - $ref: '#/components/parameters/PageParam'
-      - $ref: '#/components/parameters/PerPageParam'
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/AssignedTool'
-            pagination:
-              $ref: '#/components/schemas/Pagination'
-/agents/{agent_id}/tools/{tool_id}:
-  delete:
-    operationId: removeToolFromAgent
-    parameters:
-      - $ref: '#/components/parameters/AgentIdParam'
-      - $ref: '#/components/parameters/ToolIdParam'
-    responses:
-      '204':
-        description: Tool successfully removed from agent
-/tools:
-  get:
-    operationId: listTools
-    parameters:
-      - $ref: '#/components/parameters/PageParam'
-      - $ref: '#/components/parameters/PerPageParam'
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              type: array
-              items:
-                $ref: '#/components/schemas/ToolListItem'
-  post:
-    operationId: createTool
-    requestBody:
-      $ref: '#/components/requestBodies/CreateTool'
-    responses:
-      '201':
-        schema:
-          properties:
-            data:
-              $ref: '#/components/schemas/Tool'
-/tools/{tool_id}:
-  get:
-    operationId: getTool
-    parameters:
-      - $ref: '#/components/parameters/ToolIdParam'
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              $ref: '#/components/schemas/Tool'
-  put:
-    operationId: updateTool
-    parameters:
-      - $ref: '#/components/parameters/ToolIdParam'
-    requestBody:
-      $ref: '#/components/requestBodies/UpdateTool'
-    responses:
-      '200':
-        schema:
-          properties:
-            data:
-              $ref: '#/components/schemas/Tool'
-  delete:
-    operationId: deleteTool
-    parameters:
-      - $ref: '#/components/parameters/ToolIdParam'
-    responses:
-      '204':
-        description: Tool successfully deleted
+History and message protocol mapping:
+
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/protocols.ts:21-41
+export interface HistoryConverter<T> {
+  convert(raw: MetadataMap[]): T;
+}
+
+export interface PlatformMessageLike {
+  id: string;
+  roomId: string;
+  content: string;
+  senderId: string;
+  senderType: string;
+  senderName: string | null;
+  messageType: string;
+  metadata: MetadataMap;
+  createdAt: Date;
+}
+
+export interface HistoryLike {
+  readonly raw: MetadataMap[];
+  convert<T>(converter: HistoryConverter<T>): T;
+  readonly length: number;
+}
 ```
 
-Path and query parameter names from `thenvoi-api-v2-openapi.yaml`:
+Tool protocol mapping:
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/thenvoi-api-v2-openapi.yaml:2400-2448
-AgentIdParam:
-  name: agent_id
-  in: path
-  schema:
-    type: string
-    format: uuid
-ToolIdParam:
-  name: tool_id
-  in: path
-  schema:
-    type: string
-    format: uuid
-PageParam:
-  name: page
-  in: query
-PerPageParam:
-  name: per_page
-  in: query
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/protocols.ts:43-95
+export interface MessagingTools {
+  sendMessage(content: string, mentions?: MentionInput): Promise<ToolOperationResult>;
+  sendEvent(content: string, messageType: string, metadata?: MetadataMap): Promise<ToolOperationResult>;
+}
+
+export interface RoomParticipantTools {
+  addParticipant(name: string, role?: string): Promise<ToolOperationResult>;
+  removeParticipant(name: string): Promise<ToolOperationResult>;
+  getParticipants(): Promise<ParticipantRecord[]>;
+  createChatroom(taskId?: string): Promise<string>;
+}
+
+export interface PeerLookupTools {
+  lookupPeers(page?: number, pageSize?: number): Promise<PaginatedList<PeerRecord>>;
+}
+
+export interface ToolSchemaProvider {
+  getToolSchemas(format: "openai" | "anthropic", options?: { includeMemory?: boolean }): ToolSchemaRecord[];
+  getAnthropicToolSchemas(options?: { includeMemory?: boolean }): ToolSchemaRecord[];
+  getOpenAIToolSchemas(options?: { includeMemory?: boolean }): ToolSchemaRecord[];
+}
+
+export interface ToolExecutor {
+  executeToolCall(toolName: string, toolArgs: MetadataMap): Promise<unknown>;
+}
 ```
 
-Public type mirrors:
+Tool executor error mapping:
 
-```text
-Go Tool mirrors upstream Tool.
-Go ToolListItem mirrors upstream ToolListItem.
-Go AssignedTool mirrors upstream AssignedTool.
-Go AssignedToolDetail mirrors upstream AssignedToolDetail.
-Go ConnectionConfig mirrors upstream ConnectionConfig.
-Go AuthConfig mirrors upstream AuthConfig and the discriminator-backed auth variants with optional fields.
-Go CreateToolInput mirrors upstream CreateTool request body.
-Go UpdateToolInput mirrors upstream UpdateTool request body with every field optional.
-Go AssignToolsInput mirrors upstream AssignTools request body and inline assignToolsToMyself body.
-Go AssignToolsToAgentResponse mirrors the assignToolsToAgent response body, including `agent_id`.
-Go AssignToolsToMyselfResponse mirrors the assignToolsToMyself response body, without `agent_id`.
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/protocols.ts:97-161
+export const TOOL_EXECUTOR_ERROR_TYPES = [
+  "ToolArgumentsValidationError",
+  "ToolNotFoundError",
+  "ToolExecutionError",
+] as const;
+
+export interface ToolExecutorError {
+  ok: false;
+  errorType: ToolExecutorErrorType;
+  toolName: string;
+  message: string;
+  legacyMessage: string;
+  details?: MetadataMap;
+}
+
+export function createToolExecutorError(input: {
+  errorType: ToolExecutorErrorType;
+  toolName: string;
+  message: string;
+  legacyMessage?: string;
+  details?: MetadataMap;
+}): ToolExecutorError {
+  return {
+    ok: false,
+    errorType: input.errorType,
+    toolName: input.toolName,
+    message: input.message,
+    legacyMessage: input.legacyMessage ?? input.message,
+    ...(input.details ? { details: input.details } : {}),
+  };
+}
 ```
 
-Tool, ToolListItem, AssignedTool, AssignedToolDetail, and ConnectionConfig from `thenvoi-api-v2-openapi.yaml`:
+Adapter tools and framework adapter mapping:
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/thenvoi-api-v2-openapi.yaml:2617-2845
-Tool:
-  required:
-    - id
-    - name
-    - description
-    - json_schema
-    - connection_config
-    - owner_uuid
-    - inserted_at
-    - updated_at
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    description:
-      type: string
-    json_schema:
-      type: object
-    connection_config:
-      $ref: '#/components/schemas/ConnectionConfig'
-    owner_uuid:
-      type: string
-      format: uuid
-    organization_id:
-      type: ["string", "null"]
-    inserted_at:
-      type: string
-      format: date-time
-    updated_at:
-      type: string
-      format: date-time
-ToolListItem:
-  description: Tool summary for list views (excludes json_schema and connection_config)
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    description:
-      type: string
-    owner_uuid:
-      type: string
-      format: uuid
-    organization_id:
-      type: ["string", "null"]
-    inserted_at:
-      type: string
-      format: date-time
-    updated_at:
-      type: string
-      format: date-time
-AssignedTool:
-  required:
-    - id
-    - name
-    - description
-    - assigned_at
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    description:
-      type: string
-    assigned_at:
-      type: string
-      format: date-time
-AssignedToolDetail:
-  required:
-    - id
-    - name
-    - description
-    - json_schema
-    - assigned_at
-  properties:
-    id:
-      type: string
-      format: uuid
-    name:
-      type: string
-    description:
-      type: string
-    json_schema:
-      type: object
-    assigned_at:
-      type: string
-      format: date-time
-ConnectionConfig:
-  required:
-    - base_url
-    - method
-    - path
-    - param_type
-    - auth
-  properties:
-    base_url:
-      type: string
-      format: uri
-    method:
-      type: string
-      enum: ["GET", "POST", "PUT", "PATCH", "DELETE"]
-    path:
-      type: string
-    param_type:
-      type: string
-      enum: ["query", "body", "path"]
-    auth:
-      $ref: '#/components/schemas/AuthConfig'
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/protocols.ts:165-224
+/** Full tool surface available to framework adapters during message handling. */
+export interface AdapterToolsProtocol
+  extends MessagingTools, RoomParticipantTools, ToolSchemaProvider, ToolExecutor, Partial<PeerLookupTools>, Partial<ContactTools>, Partial<MemoryTools> {
+  /** Check capability flags to determine which optional tools are available. */
+  readonly capabilities: Readonly<AgentToolsCapabilities>;
+}
+
+export interface AgentToolsCapabilities {
+  peers: boolean;
+  contacts: boolean;
+  memory: boolean;
+}
+
+export const DEFAULT_AGENT_TOOLS_CAPABILITIES: AgentToolsCapabilities = {
+  peers: true,
+  contacts: true,
+  memory: true,
+};
+
+export interface FrameworkAdapterInput {
+  message: PlatformMessageLike;
+  tools: AdapterToolsProtocol;
+  history: HistoryLike;
+  participantsMessage: string | null;
+  contactsMessage: string | null;
+  isSessionBootstrap: boolean;
+  roomId: string;
+}
+
+/** Contract that every adapter must satisfy. Implement via {@link SimpleAdapter} for convenience. */
+export interface FrameworkAdapter {
+  onEvent(input: FrameworkAdapterInput): Promise<void>;
+  onCleanup(roomId: string): Promise<void>;
+  onStarted(agentName: string, agentDescription: string): Promise<void>;
+  onRuntimeStop?(): Promise<void>;
+}
 ```
 
-Auth and pagination shapes from `tool-api-openapi.yaml`:
+Preprocessor mapping:
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/tool-api-openapi.yaml:549-639
-ConnectionConfig:
-  required:
-    - base_url
-    - method
-    - path
-    - param_type
-    - auth
-AuthConfig:
-  required:
-    - type
-  properties:
-    type:
-      enum: ["api_key", "bearer", "basic", "vercel_bypass", "none"]
-    location:
-      enum: ["header", "query"]
-    header_name:
-      type: string
-    key_name:
-      type: string
-ApiKeyAuth:
-  required:
-    - location
-    - header_name
-    - key_name
-BearerAuth:
-  required:
-    - key_name
-BasicAuth:
-  required:
-    - key_name
-VercelBypassAuth:
-  required:
-    - key_name
-NoAuth:
-  properties:
-    type:
-      const: "none"
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/contracts/protocols.ts:203-239
+export interface PreprocessorContext {
+  roomId: string;
+  hasMessage(messageId: string): boolean;
+  recordMessage(message: PlatformMessageLike): void;
+  getTools(): AdapterToolsProtocol;
+  getRawHistory(): MetadataMap[];
+  getHydratedHistory(excludeMessageId?: string): Promise<MetadataMap[]>;
+  consumeParticipantsMessage(): string | null;
+  consumeContactsMessage(): string | null;
+  readonly isLlmInitialized: boolean;
+  markLlmInitialized(): void;
+  injectSystemMessage(message: string): void;
+  consumeSystemMessages(): string[];
+}
+
+export interface Preprocessor<TEvent extends EventEnvelope = EventEnvelope> {
+  process(context: PreprocessorContext, event: TEvent, agentId: string): Promise<FrameworkAdapterInput | null>;
+}
 ```
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/tool-api-openapi.yaml:703-725
-Pagination:
-  required:
-    - page
-    - per_page
-    - total_pages
-    - total_items
-  properties:
-    page:
-      type: integer
-    per_page:
-      type: integer
-    total_pages:
-      type: integer
-    total_items:
-      type: integer
+History provider mapping:
+
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/runtime/types.ts:49-63
+export class HistoryProvider {
+  public readonly raw: Array<Record<string, unknown>>;
+
+  public constructor(raw: Array<Record<string, unknown>>) {
+    this.raw = raw;
+  }
+
+  public convert<T>(converter: HistoryConverter<T>): T {
+    return converter.convert(this.raw);
+  }
+
+  public get length(): number {
+    return this.raw.length;
+  }
+}
 ```
 
-Create, update, and assignment request bodies from `tool-api-openapi.yaml`:
+Error mapping:
 
-```yaml
-# /Users/pp/thenvoi/product-docs-vault/PRDs/API/Alpha Release API Implementation Specs/tool-api-openapi.yaml:817-970
-CreateTool:
-  required:
-    - name
-    - description
-    - json_schema
-    - connection_config
-  properties:
-    name:
-      type: string
-      pattern: '^[a-z0-9_]+$'
-    description:
-      type: string
-    json_schema:
-      type: object
-    connection_config:
-      $ref: '#/components/schemas/ConnectionConfig'
-UpdateTool:
-  properties:
-    name:
-      type: string
-      pattern: '^[a-z0-9_]+$'
-    description:
-      type: string
-    json_schema:
-      type: object
-    connection_config:
-      $ref: '#/components/schemas/ConnectionConfig'
-AssignTools:
-  required:
-    - tool_ids
-  properties:
-    tool_ids:
-      type: array
-      items:
-        type: string
-        format: uuid
-      minItems: 1
-      uniqueItems: true
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/core/errors.ts:1-34
+export class ThenvoiSdkError extends Error {
+  public constructor(message: string, cause?: unknown) {
+    super(message, cause !== undefined ? { cause } : undefined);
+    this.name = "ThenvoiSdkError";
+  }
+}
+
+export class UnsupportedFeatureError extends ThenvoiSdkError {
+  public constructor(message: string) {
+    super(message);
+    this.name = "UnsupportedFeatureError";
+  }
+}
+
+export class ValidationError extends ThenvoiSdkError {
+  public constructor(message: string, cause?: unknown) {
+    super(message, cause);
+    this.name = "ValidationError";
+  }
+}
+
+export class TransportError extends ThenvoiSdkError {
+  public constructor(message: string, cause?: unknown) {
+    super(message, cause);
+    this.name = "TransportError";
+  }
+}
+
+export class RuntimeStateError extends ThenvoiSdkError {
+  public constructor(message: string) {
+    super(message);
+    this.name = "RuntimeStateError";
+  }
+}
 ```
+
+Logger mapping:
+
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/core/logger.ts:1-18
+export interface Logger {
+  debug(message: string, context?: Record<string, unknown>): void;
+  info(message: string, context?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown>): void;
+  error(message: string, context?: Record<string, unknown>): void;
+}
+
+const noop = (): void => undefined;
+
+export class NoopLogger implements Logger {
+  public debug = noop;
+  public info = noop;
+  public warn = noop;
+  public error = noop;
+}
+```
+
+Generic adapter mapping:
+
+```typescript
+// /Users/pp/thenvoi/thenvoi-sdk-typescript/packages/sdk/src/adapters/GenericAdapter.ts:5-44
+export type GenericAdapterHandler = (args: {
+  message: PlatformMessage;
+  tools: AdapterToolsProtocol;
+  history: HistoryProvider;
+  participantsMessage: string | null;
+  contactsMessage: string | null;
+  isSessionBootstrap: boolean;
+  roomId: string;
+  agentName: string;
+  agentDescription: string;
+}) => Promise<void>;
+
+export class GenericAdapter extends SimpleAdapter<HistoryProvider> {
+  private readonly handler: GenericAdapterHandler;
+
+  public constructor(handler: GenericAdapterHandler) {
+    super();
+    this.handler = handler;
+  }
+
+  public async onMessage(...): Promise<void> {
+    await this.handler({
+      message,
+      tools,
+      history,
+      participantsMessage,
+      contactsMessage,
+      isSessionBootstrap: context.isSessionBootstrap,
+      roomId: context.roomId,
+      agentName: this.agentName,
+      agentDescription: this.agentDescription,
+    });
+  }
+}
+```
+
+Public mirror names for validation: TypeScript `MetadataMap` -> Go `core.Metadata`, `ToolOperationResult` -> `core.ToolOperationResult`, `MentionReference` -> `core.MentionReference`, `PaginationMetadataLike` -> `core.PaginationMetadataLike`, `PaginatedList<TItem>` -> `core.PaginatedList[T]`, `ParticipantRecord` -> `core.ParticipantRecord`, `PeerRecord` -> `core.PeerRecord`, `ContactRecord` -> `core.ContactRecord`, `MemoryRecord` -> `core.MemoryRecord`, `ToolSchemaRecord` -> `core.ToolSchemaRecord`, `PlatformMessageLike` -> `core.PlatformMessageLike`, `HistoryProvider` -> `core.HistoryProvider`, `AdapterToolsProtocol` -> `core.AdapterToolsProtocol`, `FrameworkAdapter` -> `core.FrameworkAdapter`, `ThenvoiSdkError` -> `core.ThenvoiSdkError`, and TypeScript `GenericAdapter` -> Go `adapters.GenericAdapter`.
 
 ## Goals / Non-Goals / Constraints / Risks
-Goals: add the eleven exact public methods requested by name; add contract-shaped public Go types for tool resources, auth config, connection config, pagination, list responses, mutation responses, and request inputs; test every method through fake transports; preserve existing client transport and error behavior.
+Goals: define the public contracts listed in the work order, use idiomatic Go names while preserving JSON wire names where the TypeScript DTO is a wire DTO, make all async TypeScript protocol methods accept `context.Context` and return `(value, error)`, and keep tests dependency-free.
 
-Non-goals: generated OpenAPI client code, live integration tests, README updates, changelog updates, PR creation, or changes outside `client/tools.go` and `client/tools_test.go` unless Go formatting touches those new files.
+Non-goals: no REST client methods, websocket transport, platform tool execution, LLM provider adapters, console logger, or runtime session implementation.
 
-Constraints: implementation must not start until human approval. Do not modify `CHANGELOG.md`. Do not modify pre-existing `client/*.go` files. Use `Client.Do` for all calls. Use `/api/v2` for these new tool operations because both cited upstream specs declare `/api/v2` server URLs for the bare operation paths. That means `/tools` maps to `/api/v2/tools`, `/agents/{agent_id}/tools` maps to `/api/v2/agents/{agent_id}/tools`, and `/agents/me/tools` maps to `/api/v2/agents/me/tools`. Use `per_page`, not `page_size`, for the new tool endpoints because the cited tool contracts define `PerPageParam`.
+Constraints: `AdapterToolsProtocol` in Go cannot express TypeScript `Partial<PeerLookupTools>`, `Partial<ContactTools>`, and `Partial<MemoryTools>` directly inside one interface without forcing implementations to provide optional methods. The plan is to make `AdapterToolsProtocol` require the mandatory tools plus `Capabilities() AgentToolsCapabilities`, while still exporting `PeerLookupTools`, `ContactTools`, and `MemoryTools` as separate optional interfaces that callers can type-assert when capability flags are true.
 
-Risks: the repo currently has `PaginationMetadata` with `page_size`/`total_count`, while the tool contracts use `Pagination` with `per_page`/`total_items`; adding a tool-specific pagination type avoids field loss. The contract uses generic object schemas for `json_schema`, so `map[string]any` is the practical SDK shape. Auth variants share one discriminator schema, so one `AuthConfig` struct with optional fields is less error-prone than several one-off types.
+Risks: public naming must remain stable for downstream work orders, `MentionInput` is a TypeScript union and needs a Go representation that does not block either string mentions or structured mention references, and `HistoryProvider.Raw()` should avoid hidden copies because the contract says `Convert` passes the raw slice through unchanged.
 
 ## Files / Surfaces Expected To Change
-- `client/tools.go` — new exported types and all eleven `Client` methods.
-- `client/tools_test.go` — method/path/body/error tests using `roundTripFunc`.
-- `notes/plan.md` — this plan.
+- `core/dtos.go` — define `Metadata`, operation results, mention references/input, pagination, participant/peer/contact/memory/tool schema records, contact/memory request DTOs, and `PlatformMessageLike`.
+- `core/protocols.go` — define tool interfaces, `AdapterToolsProtocol`, `FrameworkAdapterInput`, `PreprocessorContext`, `Preprocessor`, `FrameworkAdapter`, `AgentToolsCapabilities`, and `DefaultAgentToolsCapabilities`.
+- `core/errors.go` — define typed SDK errors with `Error()`, `Name()`, and `Unwrap()` behavior plus constructors or struct fields that allow causes.
+- `core/logger.go` — define `Logger` and `NoopLogger` with `Debug`, `Info`, `Warn`, and `Error` methods that do nothing.
+- `core/history.go` — define `HistoryConverter[T]`, `HistoryProvider`, `NewHistoryProvider`, `Raw`, `Len`, and `Convert`.
+- `adapters/generic.go` — define `GenericAdapterHandler`, handler input struct, `GenericAdapter`, lifecycle state, and no-op cleanup/runtime stop methods.
+- `core/core_test.go` — cover typed errors, history conversion, noop logger, and tool executor error helpers.
+- `adapters/generic_test.go` — cover `GenericAdapter` lifecycle and handler forwarding.
+- `go.mod` — no planned dependency changes; modify only if Go package metadata requires it.
 
 ## Implementation Approach
-Create `client/tools.go` with `context`, `errors`, `net/http`, `net/url`, and `time` imports. Define `Tool`, `ToolListItem`, `AssignedTool`, `AssignedToolDetail`, `ConnectionConfig`, `AuthConfig`, `ToolPagination`, `ListToolsInput`, `ListToolsResponse`, `ListAgentToolsInput`, `ListAgentToolsResponse`, `ListMyToolsInput`, `ListMyToolsResponse`, `CreateToolInput`, `UpdateToolInput`, `AssignToolsInput`, `AssignedToolSummary`, `AssignToolsToAgentResponse`, and `AssignToolsToMyselfResponse` shapes. Keep all field names aligned to the contract JSON names.
+Create `core` as a small, dependency-free package. Use `type Metadata map[string]any` for TypeScript `MetadataMap`, `map[string]any` fields for open-ended DTO data, pointers for nullable or optional scalars, and generic `PaginatedList[T]` with `Data []T` plus optional `Metadata *PaginationMetadataLike`.
 
-Use `map[string]any` for `json_schema`, `*ConnectionConfig` in update input so omitted config stays omitted, pointer strings for optional update fields, and `*string` for nullable `organization_id`. Use `time.Time` for required timestamp fields, matching existing client types. Keep `AuthConfig.Type` as required by using a plain `string`, while `Location`, `HeaderName`, and `KeyName` stay pointer strings because their requiredness depends on the auth variant. Validate variant-specific auth requirements in `CreateTool` when `ConnectionConfig.Auth.Type` is `api_key`, `bearer`, `basic`, or `vercel_bypass`; for `UpdateTool`, validate only when a replacement `ConnectionConfig` is supplied.
+Define `MentionInput` as a struct with `Handles []string` and `References []MentionReference` rather than `[]any`, so callers can represent both TypeScript union arms without runtime type ambiguity. Add a doc comment that states runtime serialization must choose exactly one arm and reject or define precedence when both slices are populated. Preserve snake_case JSON tags on wire-derived contact and memory fields.
 
-Implement the public methods with receiver spelling `func (client *Client) Name...` to satisfy the acceptance grep. Validate required path IDs before making requests with messages such as `thenvoi: tool id is required` and `thenvoi: agent id is required`. Validate required request fields for create and assignment before transport calls, following `CreateMemory` and contact input patterns.
+Define protocol interfaces with `context.Context` as the first argument for methods that correspond to TypeScript promises. `AdapterToolsProtocol` should embed the mandatory tool groups and expose `Capabilities() AgentToolsCapabilities`; optional groups remain separately exported interfaces. `DefaultAgentToolsCapabilities` should be a function returning the default value to prevent package-level mutable state, with a doc comment that each call returns an independent struct value.
 
-Build query strings with `page` and `per_page` for `ListTools`, `ListAgentTools`, and `ListMyTools`. Use `url.PathEscape` for `agentID` and `toolID`. Return decoded resource pointers for single-resource responses, response structs for list and assignment endpoints, and `error` only for delete endpoints. Tool requests must pass `/api/v2/...` paths to `Client.Do`.
+Define `HistoryProvider` with an internal raw `[]Metadata`, `Raw() []Metadata`, `Len() int`, and `Convert(converter HistoryConverter[T]) T`. `Convert` must call `converter.Convert(h.raw)` and must not clone, sort, append, or mutate the slice.
 
-Write `client/tools_test.go` with table-driven tests where that keeps duplication low. Each required method will be called at least once and the fake transport will assert the HTTP method and exact `/api/v2/...` URL path using placeholder IDs. POST and PUT tests will decode request JSON and assert `tool_ids`, `name`, `json_schema`, and `connection_config` shape. One 4xx propagation test will use a representative tool method and assert `errors.Is(err, client.ErrUnauthorized)` or the matching existing API error behavior; additional 4xx cases can be added for delete or update if the implementation stays concise.
+Implement typed errors as Go error structs with stable `Name() string`, `Error() string`, and `Unwrap() error`. Provide constructors for the base and derived error types where useful. `errors.Is` should see wrapped causes through `Unwrap`, and `errors.As` should match concrete SDK error pointer types.
+
+Implement `ToolExecutorError` as a struct with `OK bool`, `ErrorType`, `ToolName`, `Message`, `LegacyMessage`, and optional `Details`. `NewToolExecutorError` should default `LegacyMessage` to `Message`, `IsToolExecutorError` should validate accepted error type strings and required fields, and `LegacyToolExecutorErrorMessage` should return the string itself for legacy string values, the structured legacy message for valid structured values, and `("", false)` or equivalent for unsupported values.
+
+Implement `adapters.GenericAdapter` as a concrete `core.FrameworkAdapter`: store the handler, agent name, and agent description; `OnStarted` records name and description; `OnEvent` forwards message, tools, history, participant/contact messages, bootstrap flag, room ID, agent name, and description to the handler; `OnCleanup` and `OnRuntimeStop` return nil.
 
 ## Verification Strategy
-Validation proves the implementation at three levels: compilation catches exported type/method mistakes, vet catches malformed tests or suspicious code, and the unit suite catches request construction, JSON bodies, response decoding, and non-2xx propagation. The grep command verifies all eleven operationIds map to exactly one expected public method in `client/tools.go`.
+Validation should run the Go build, vet, and test suite, then run the architect-required grep checks to prove the expected public interfaces and error type exist. Unit tests should cover the work-order named cases: each typed error name and cause behavior, `HistoryProvider` raw pass-through and length, `GenericAdapter` lifecycle and handler arguments, and structured plus legacy tool executor error helper behavior.
 
 ## verificationCommands
+- `go test ./...`
+- `grep -R "type FrameworkAdapter interface" -n core adapters`
+- `grep -R "type AdapterToolsProtocol interface" -n core`
+- `grep -R "type ThenvoiSdkError" -n core`
 - `go build ./...`
 - `go vet ./...`
-- `go test ./...`
-- `bash -c 'cd client && grep -lE "^func \\(client \\*Client\\) (ListTools|CreateTool|GetTool|UpdateTool|DeleteTool|AssignToolsToAgent|ListAgentTools|RemoveToolFromAgent|ListMyTools|AssignToolsToMyself|RemoveToolFromMyself)\\b" tools.go'`
 
 ## Rollback / Safety Notes
-Rollback is deleting `client/tools.go` and `client/tools_test.go`, leaving the rest of the SDK unchanged. Since the new surface is additive and no existing client files change, the primary compatibility risk is limited to exported type names chosen for the new API.
+The change is additive: rollback can remove the new `core` and `adapters` files plus their tests. No network behavior, persistent storage, stdout/stderr logging, or existing client package behavior should change.
 
 ## Open Questions
-None blocking. The plan no longer assumes `/api/v1`; the cited tool specs require `/api/v2` for these operation paths.
+None blocking. The plan assumes Go protocol methods should accept `context.Context` because the TypeScript source uses promises and existing Go client methods already use contexts.
