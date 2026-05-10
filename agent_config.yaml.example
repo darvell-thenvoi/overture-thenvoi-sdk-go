@@ -1,0 +1,5 @@
+default:
+  agent_id: "agent-id"
+  api_key: "api-key"
+  ws_url: "wss://api.thenvoi.com/ws"
+  rest_url: "https://api.thenvoi.com"
