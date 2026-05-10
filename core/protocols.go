@@ -27,8 +27,11 @@ type ContactTools interface {
 }
 
 type MemoryTools interface {
-	ListMemories(ctx context.Context, metadata Metadata) (*PaginatedList[MemoryRecord], error)
-	CreateMemory(ctx context.Context, memory MemoryRecord) (*MemoryRecord, error)
+	ListMemories(ctx context.Context, args *ListMemoriesArgs) (*PaginatedList[MemoryRecord], error)
+	StoreMemory(ctx context.Context, args StoreMemoryArgs) (*MemoryRecord, error)
+	GetMemory(ctx context.Context, memoryID string) (*MemoryRecord, error)
+	SupersedeMemory(ctx context.Context, memoryID string) (*ToolOperationResult, error)
+	ArchiveMemory(ctx context.Context, memoryID string) (*ToolOperationResult, error)
 }
 
 type ToolSchemaOptions struct {

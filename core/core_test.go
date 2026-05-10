@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -117,4 +118,56 @@ func TestDefaultAgentToolsCapabilitiesReturnsEnabledValue(t *testing.T) {
 	if !got.Peers || !got.Contacts || !got.Memory {
 		t.Fatalf("capabilities = %+v", got)
 	}
+}
+
+func TestMemoryToolsContractIncludesUpstreamMethods(t *testing.T) {
+	t.Parallel()
+
+	var tools core.MemoryTools = fakeMemoryTools{}
+	ctx := context.Background()
+	filter := core.ListMemoriesArgs{}
+
+	if _, err := tools.ListMemories(ctx, &filter); err != nil {
+		t.Fatalf("ListMemories returned error: %v", err)
+	}
+	if _, err := tools.StoreMemory(ctx, core.StoreMemoryArgs{
+		Content: "remember this",
+		System:  core.MemorySystemLongTerm,
+		Type:    core.MemoryTypeSemantic,
+		Segment: core.MemorySegmentAgent,
+		Thought: "test",
+	}); err != nil {
+		t.Fatalf("StoreMemory returned error: %v", err)
+	}
+	if _, err := tools.GetMemory(ctx, "mem-1"); err != nil {
+		t.Fatalf("GetMemory returned error: %v", err)
+	}
+	if _, err := tools.SupersedeMemory(ctx, "mem-1"); err != nil {
+		t.Fatalf("SupersedeMemory returned error: %v", err)
+	}
+	if _, err := tools.ArchiveMemory(ctx, "mem-1"); err != nil {
+		t.Fatalf("ArchiveMemory returned error: %v", err)
+	}
+}
+
+type fakeMemoryTools struct{}
+
+func (fakeMemoryTools) ListMemories(_ context.Context, _ *core.ListMemoriesArgs) (*core.PaginatedList[core.MemoryRecord], error) {
+	return &core.PaginatedList[core.MemoryRecord]{}, nil
+}
+
+func (fakeMemoryTools) StoreMemory(_ context.Context, _ core.StoreMemoryArgs) (*core.MemoryRecord, error) {
+	return &core.MemoryRecord{}, nil
+}
+
+func (fakeMemoryTools) GetMemory(_ context.Context, _ string) (*core.MemoryRecord, error) {
+	return &core.MemoryRecord{}, nil
+}
+
+func (fakeMemoryTools) SupersedeMemory(_ context.Context, _ string) (*core.ToolOperationResult, error) {
+	return &core.ToolOperationResult{}, nil
+}
+
+func (fakeMemoryTools) ArchiveMemory(_ context.Context, _ string) (*core.ToolOperationResult, error) {
+	return &core.ToolOperationResult{}, nil
 }

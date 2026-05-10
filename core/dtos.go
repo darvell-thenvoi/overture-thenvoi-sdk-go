@@ -107,6 +107,80 @@ type RespondContactRequestArgs struct {
 	RequestID string
 }
 
+type MemorySystem string
+
+const (
+	MemorySystemSensory  MemorySystem = "sensory"
+	MemorySystemWorking  MemorySystem = "working"
+	MemorySystemLongTerm MemorySystem = "long_term"
+)
+
+type MemoryType string
+
+const (
+	MemoryTypeIconic     MemoryType = "iconic"
+	MemoryTypeEchoic     MemoryType = "echoic"
+	MemoryTypeHaptic     MemoryType = "haptic"
+	MemoryTypeEpisodic   MemoryType = "episodic"
+	MemoryTypeSemantic   MemoryType = "semantic"
+	MemoryTypeProcedural MemoryType = "procedural"
+)
+
+type MemorySegment string
+
+const (
+	MemorySegmentUser      MemorySegment = "user"
+	MemorySegmentAgent     MemorySegment = "agent"
+	MemorySegmentTool      MemorySegment = "tool"
+	MemorySegmentGuideline MemorySegment = "guideline"
+)
+
+type MemoryStatus string
+
+const (
+	MemoryStatusActive     MemoryStatus = "active"
+	MemoryStatusSuperseded MemoryStatus = "superseded"
+	MemoryStatusArchived   MemoryStatus = "archived"
+	MemoryStatusAll        MemoryStatus = "all"
+)
+
+type MemoryVisibility string
+
+const (
+	MemoryVisibilitySubject      MemoryVisibility = "subject"
+	MemoryVisibilityOrganization MemoryVisibility = "organization"
+)
+
+type MemoryScope string
+
+const (
+	MemoryScopeSubject      MemoryScope = "subject"
+	MemoryScopeOrganization MemoryScope = "organization"
+	MemoryScopeAll          MemoryScope = "all"
+)
+
+type ListMemoriesArgs struct {
+	SubjectID    *string        `json:"subject_id,omitempty"`
+	Scope        *MemoryScope   `json:"scope,omitempty"`
+	System       *MemorySystem  `json:"system,omitempty"`
+	Type         *MemoryType    `json:"type,omitempty"`
+	Segment      *MemorySegment `json:"segment,omitempty"`
+	ContentQuery *string        `json:"content_query,omitempty"`
+	PageSize     *int           `json:"page_size,omitempty"`
+	Status       *MemoryStatus  `json:"status,omitempty"`
+}
+
+type StoreMemoryArgs struct {
+	Content   string            `json:"content"`
+	System    MemorySystem      `json:"system"`
+	Type      MemoryType        `json:"type"`
+	Segment   MemorySegment     `json:"segment"`
+	Thought   string            `json:"thought"`
+	Scope     *MemoryVisibility `json:"scope,omitempty"`
+	SubjectID *string           `json:"subject_id,omitempty"`
+	Metadata  Metadata          `json:"metadata,omitempty"`
+}
+
 type MemoryRecord struct {
 	ID             *string  `json:"id,omitempty"`
 	Content        *string  `json:"content,omitempty"`
