@@ -144,6 +144,48 @@ func TestContactRequestsResultUsesRequestRecordShapes(t *testing.T) {
 	}
 }
 
+func TestEventEnvelopeJSONShape(t *testing.T) {
+	t.Parallel()
+
+	roomID := "room-1"
+	envelope := core.EventEnvelope{
+		Type:    "message.created",
+		RoomID:  &roomID,
+		Payload: core.Metadata{"message_id": "msg-1"},
+		Raw:     core.Metadata{"source": "runtime"},
+	}
+
+	data, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatalf("Marshal returned error: %v", err)
+	}
+
+	var encoded map[string]any
+	if err := json.Unmarshal(data, &encoded); err != nil {
+		t.Fatalf("Unmarshal encoded JSON returned error: %v", err)
+	}
+	if encoded["type"] != "message.created" || encoded["roomId"] != "room-1" {
+		t.Fatalf("encoded envelope = %s", data)
+	}
+	if _, ok := encoded["payload"].(map[string]any); !ok {
+		t.Fatalf("payload missing from encoded envelope = %s", data)
+	}
+	if _, ok := encoded["raw"].(map[string]any); !ok {
+		t.Fatalf("raw missing from encoded envelope = %s", data)
+	}
+
+	var decoded core.EventEnvelope
+	if err := json.Unmarshal([]byte(`{"type":"bootstrap","roomId":null,"payload":{"ok":true},"raw":{"event_id":"evt-1"}}`), &decoded); err != nil {
+		t.Fatalf("Unmarshal returned error: %v", err)
+	}
+	if decoded.Type != "bootstrap" || decoded.RoomID != nil {
+		t.Fatalf("decoded envelope = %+v", decoded)
+	}
+	if decoded.Payload["ok"] != true || decoded.Raw["event_id"] != "evt-1" {
+		t.Fatalf("decoded metadata = payload:%+v raw:%+v", decoded.Payload, decoded.Raw)
+	}
+}
+
 func TestMemoryToolsContractIncludesUpstreamMethods(t *testing.T) {
 	t.Parallel()
 

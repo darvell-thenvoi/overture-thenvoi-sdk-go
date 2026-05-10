@@ -79,8 +79,10 @@ type FrameworkAdapterInput struct {
 }
 
 type EventEnvelope struct {
-	Type    string
-	Payload Metadata
+	Type    string   `json:"type"`
+	RoomID  *string  `json:"roomId"`
+	Payload Metadata `json:"payload"`
+	Raw     Metadata `json:"raw,omitempty"`
 }
 
 type PreprocessorContext interface {
