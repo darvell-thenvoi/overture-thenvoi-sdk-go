@@ -249,52 +249,52 @@ func TestTaskValidationErrorsDoNotCallTransport(t *testing.T) {
 	assertError(t, func() error {
 		_, err := sdk.ListMyTasksInChat(ctx, "", nil)
 		return err
-	}, "thenvoi: chat id is required")
+	}, "band: chat id is required")
 	assertError(t, func() error {
 		_, err := sdk.CreateTaskInChat(ctx, "chat_1", client.CreateTaskInChatInput{})
 		return err
-	}, "thenvoi: description is required")
+	}, "band: description is required")
 	assertError(t, func() error {
 		_, err := sdk.CreateBulkTasksInChat(ctx, "chat_1", client.CreateBulkTasksInChatInput{})
 		return err
-	}, "thenvoi: at least one task is required")
+	}, "band: at least one task is required")
 	assertError(t, func() error {
 		_, err := sdk.CreateBulkTasksInChat(ctx, "chat_1", client.CreateBulkTasksInChatInput{Tasks: []client.BulkTaskInput{{}}})
 		return err
-	}, "thenvoi: task description is required")
+	}, "band: task description is required")
 	assertError(t, func() error {
 		_, err := sdk.GetTask(ctx, "", "task_1")
 		return err
-	}, "thenvoi: chat id is required")
+	}, "band: chat id is required")
 	assertError(t, func() error {
 		_, err := sdk.GetTask(ctx, "chat_1", "")
 		return err
-	}, "thenvoi: task id is required")
+	}, "band: task id is required")
 	assertError(t, func() error {
 		_, err := sdk.UpdateTaskInChat(ctx, "", "task_1", client.UpdateTaskInChatInput{})
 		return err
-	}, "thenvoi: chat id is required")
+	}, "band: chat id is required")
 	assertError(t, func() error {
 		_, err := sdk.UpdateTaskInChat(ctx, "chat_1", "", client.UpdateTaskInChatInput{})
 		return err
-	}, "thenvoi: task id is required")
+	}, "band: task id is required")
 	assertError(t, func() error {
 		return sdk.DeleteTaskInChat(ctx, "", "task_1")
-	}, "thenvoi: chat id is required")
+	}, "band: chat id is required")
 	assertError(t, func() error {
 		return sdk.DeleteTaskInChat(ctx, "chat_1", "")
-	}, "thenvoi: task id is required")
+	}, "band: task id is required")
 	assertError(t, func() error {
 		_, err := sdk.CreateUserTask(ctx, client.CreateUserTaskInput{})
 		return err
-	}, "thenvoi: description is required")
+	}, "band: description is required")
 	assertError(t, func() error {
 		_, err := sdk.GetUserTask(ctx, "")
 		return err
-	}, "thenvoi: task id is required")
+	}, "band: task id is required")
 	assertError(t, func() error {
 		return sdk.DeleteUserTask(ctx, "")
-	}, "thenvoi: task id is required")
+	}, "band: task id is required")
 }
 
 func newTaskTestClient(transport roundTripFunc) *client.Client {

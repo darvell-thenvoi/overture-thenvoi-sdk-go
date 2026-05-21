@@ -22,7 +22,7 @@ type GetChatContextResponse struct {
 // GetChatContext returns messages relevant to the agent for execution context.
 func (client *Client) GetChatContext(ctx context.Context, chatID string, input *GetChatContextInput) (*GetChatContextResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	values := url.Values{}
 	if input != nil {

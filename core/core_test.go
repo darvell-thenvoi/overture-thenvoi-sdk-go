@@ -25,9 +25,9 @@ func TestTypedErrorsExposeNamesAndCauses(t *testing.T) {
 		t.Fatalf("errors.Is did not match wrapped cause")
 	}
 
-	var sdkErr *core.ThenvoiSdkError
+	var sdkErr *core.BandSdkError
 	if !errors.As(err, &sdkErr) {
-		t.Fatalf("errors.As did not match ThenvoiSdkError")
+		t.Fatalf("errors.As did not match BandSdkError")
 	}
 
 	if got := core.NewUnsupportedFeatureError("missing").Name(); got != "UnsupportedFeatureError" {

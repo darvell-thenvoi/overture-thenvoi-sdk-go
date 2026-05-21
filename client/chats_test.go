@@ -123,7 +123,7 @@ func TestGetChatRoom(t *testing.T) {
 			name:   "requires chat id",
 			chatID: "",
 			assertResult: func(t *testing.T, out *client.ChatRoom, err error) {
-				if out != nil || err == nil || err.Error() != "thenvoi: chat id is required" {
+				if out != nil || err == nil || err.Error() != "band: chat id is required" {
 					t.Fatalf("out=%#v err=%v", out, err)
 				}
 			},
@@ -215,7 +215,7 @@ func TestChatRoomV2ValidationAndAPIErrors(t *testing.T) {
 	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusNotFound, `{"error":{"code":"not_found","message":"missing"}}`), nil
 	})}))
-	if _, err := sdk.UpdateChatRoom(context.Background(), "", client.UpdateChatRoomInput{}); err == nil || err.Error() != "thenvoi: chat id is required" {
+	if _, err := sdk.UpdateChatRoom(context.Background(), "", client.UpdateChatRoomInput{}); err == nil || err.Error() != "band: chat id is required" {
 		t.Fatalf("UpdateChatRoom validation err=%v", err)
 	}
 	if err := sdk.DeleteChatRoom(context.Background(), "chat_1"); !errors.Is(err, client.ErrNotFound) {

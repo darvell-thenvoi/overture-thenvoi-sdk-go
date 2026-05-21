@@ -24,8 +24,8 @@ func TestAgentAdminEndpoints(t *testing.T) {
 			}
 			return jsonResponse(http.StatusOK, `{"data":[{"id":"agent_1","name":"Helper","description":"Builds useful things","model_type":"gpt-4","is_external":false,"owner_uuid":"owner_1","organization_id":null,"system_prompt_id":null,"inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-03T03:04:05Z"}],"pagination":{"page":2,"per_page":25,"total_pages":1,"total_items":1}}`), nil
 		case "/api/v2/agents/register":
-			assertJSONFields(t, req, map[string]any{"name": "External", "description": "Runs outside Thenvoi", "model_type": "custom"})
-			return jsonResponse(http.StatusCreated, `{"data":{"agent":{"id":"agent_2","name":"External","description":"Runs outside Thenvoi","model_type":"custom","is_external":true,"owner_uuid":"owner_1","organization_id":null,"system_prompt_id":null,"structured_output_schema":null,"inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-03T03:04:05Z"},"credentials":{"api_key":"key_1","message":"store this key"}}}`), nil
+			assertJSONFields(t, req, map[string]any{"name": "External", "description": "Runs outside Band", "model_type": "custom"})
+			return jsonResponse(http.StatusCreated, `{"data":{"agent":{"id":"agent_2","name":"External","description":"Runs outside Band","model_type":"custom","is_external":true,"owner_uuid":"owner_1","organization_id":null,"system_prompt_id":null,"structured_output_schema":null,"inserted_at":"2026-01-02T03:04:05Z","updated_at":"2026-01-03T03:04:05Z"},"credentials":{"api_key":"key_1","message":"store this key"}}}`), nil
 		case "/api/v2/agents/agent%2F1":
 			if req.Method == http.MethodDelete {
 				return jsonResponse(http.StatusNoContent, ``), nil
@@ -51,7 +51,7 @@ func TestAgentAdminEndpoints(t *testing.T) {
 	if err != nil || len(agents.Data) != 1 || agents.Pagination.TotalItems != 1 {
 		t.Fatalf("ListAgents out=%#v err=%v", agents, err)
 	}
-	registered, err := sdk.RegisterExternalAgent(context.Background(), client.RegisterExternalAgentInput{Name: "External", Description: "Runs outside Thenvoi", ModelType: "custom"})
+	registered, err := sdk.RegisterExternalAgent(context.Background(), client.RegisterExternalAgentInput{Name: "External", Description: "Runs outside Band", ModelType: "custom"})
 	if err != nil || registered.Credentials.APIKey != "key_1" {
 		t.Fatalf("RegisterExternalAgent out=%#v err=%v", registered, err)
 	}
@@ -105,10 +105,10 @@ func TestAgentAdminValidationAndAPIErrors(t *testing.T) {
 		return jsonResponse(http.StatusUnauthorized, `{"error":{"code":"unauthorized","message":"bad key"}}`), nil
 	})}))
 
-	if _, err := sdk.CreatePlatformAgent(context.Background(), client.CreatePlatformAgentInput{}); err == nil || err.Error() != "thenvoi: name is required" {
+	if _, err := sdk.CreatePlatformAgent(context.Background(), client.CreatePlatformAgentInput{}); err == nil || err.Error() != "band: name is required" {
 		t.Fatalf("CreatePlatformAgent validation err=%v", err)
 	}
-	if _, err := sdk.UpdateAgent(context.Background(), "", client.UpdateAgentInput{}); err == nil || err.Error() != "thenvoi: agent id is required" {
+	if _, err := sdk.UpdateAgent(context.Background(), "", client.UpdateAgentInput{}); err == nil || err.Error() != "band: agent id is required" {
 		t.Fatalf("UpdateAgent validation err=%v", err)
 	}
 	if err := sdk.DeleteAgent(context.Background(), "agent_1"); !errors.Is(err, client.ErrUnauthorized) {

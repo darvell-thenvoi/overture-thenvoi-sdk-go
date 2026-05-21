@@ -37,17 +37,17 @@ type ListChatMessagesResponse struct {
 // SendChatMessage sends a text message to a chat room.
 func (client *Client) SendChatMessage(ctx context.Context, chatID string, input SendChatMessageInput) (*MessageSentResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if input.Content == "" {
-		return nil, errors.New("thenvoi: content is required")
+		return nil, errors.New("band: content is required")
 	}
 	if len(input.Mentions) == 0 {
-		return nil, errors.New("thenvoi: at least one mention is required")
+		return nil, errors.New("band: at least one mention is required")
 	}
 	for _, mention := range input.Mentions {
 		if mention.ID == "" {
-			return nil, errors.New("thenvoi: mention id is required")
+			return nil, errors.New("band: mention id is required")
 		}
 	}
 
@@ -70,13 +70,13 @@ func (client *Client) SendChatMessage(ctx context.Context, chatID string, input 
 // CreateChatEvent records a non-text event in a chat room.
 func (client *Client) CreateChatEvent(ctx context.Context, chatID string, input CreateChatEventInput) (*EventCreatedResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if input.Content == "" {
-		return nil, errors.New("thenvoi: content is required")
+		return nil, errors.New("band: content is required")
 	}
 	if input.MessageType == "" {
-		return nil, errors.New("thenvoi: message type is required")
+		return nil, errors.New("band: message type is required")
 	}
 
 	var out struct {
@@ -98,7 +98,7 @@ func (client *Client) CreateChatEvent(ctx context.Context, chatID string, input 
 // ListChatMessages lists messages that the agent can process.
 func (client *Client) ListChatMessages(ctx context.Context, chatID string, input *ListChatMessagesInput) (*ListChatMessagesResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	values := url.Values{}
 	if input != nil {
@@ -119,7 +119,7 @@ func (client *Client) ListChatMessages(ctx context.Context, chatID string, input
 // GetNextChatMessage returns the oldest unprocessed message for the agent, or nil on 204.
 func (client *Client) GetNextChatMessage(ctx context.Context, chatID string) (*ChatMessage, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	var out struct {
 		Data ChatMessage `json:"data"`
@@ -147,7 +147,7 @@ func (client *Client) MarkChatMessageProcessed(ctx context.Context, chatID strin
 // MarkChatMessageFailed marks a message processing attempt as failed.
 func (client *Client) MarkChatMessageFailed(ctx context.Context, chatID string, messageID string, reason string) (*MessageStatusResponse, error) {
 	if reason == "" {
-		return nil, errors.New("thenvoi: failure reason is required")
+		return nil, errors.New("band: failure reason is required")
 	}
 	return client.markChatMessageStatus(ctx, chatID, messageID, "failed", map[string]string{"error": reason})
 }
@@ -155,10 +155,10 @@ func (client *Client) MarkChatMessageFailed(ctx context.Context, chatID string, 
 // DeleteChatMessage deletes an API v2 chat message.
 func (client *Client) DeleteChatMessage(ctx context.Context, chatID string, messageID string) error {
 	if chatID == "" {
-		return errors.New("thenvoi: chat id is required")
+		return errors.New("band: chat id is required")
 	}
 	if messageID == "" {
-		return errors.New("thenvoi: message id is required")
+		return errors.New("band: message id is required")
 	}
 
 	path := "/api/v2/chats/" + url.PathEscape(chatID) + "/messages/" + url.PathEscape(messageID)
@@ -167,10 +167,10 @@ func (client *Client) DeleteChatMessage(ctx context.Context, chatID string, mess
 
 func (client *Client) markChatMessageStatus(ctx context.Context, chatID string, messageID string, status string, body any) (*MessageStatusResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if messageID == "" {
-		return nil, errors.New("thenvoi: message id is required")
+		return nil, errors.New("band: message id is required")
 	}
 	var out struct {
 		Data MessageStatusResponse `json:"data"`

@@ -78,7 +78,7 @@ func (client *Client) ListMyChats(ctx context.Context, input *ListMyChatsInput) 
 // GetChatRoom fetches a chat room where the current agent is a participant.
 func (client *Client) GetChatRoom(ctx context.Context, chatID string) (*ChatRoom, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 
 	var out struct {
@@ -104,7 +104,7 @@ func (client *Client) CreateChatRoom(ctx context.Context, input CreateChatRoomIn
 // UpdateChatRoom updates an API v2 chat room.
 func (client *Client) UpdateChatRoom(ctx context.Context, chatID string, input UpdateChatRoomInput) (*ChatRoom, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 
 	var out struct {
@@ -120,7 +120,7 @@ func (client *Client) UpdateChatRoom(ctx context.Context, chatID string, input U
 // DeleteChatRoom deletes an API v2 chat room.
 func (client *Client) DeleteChatRoom(ctx context.Context, chatID string) error {
 	if chatID == "" {
-		return errors.New("thenvoi: chat id is required")
+		return errors.New("band: chat id is required")
 	}
 	return client.Do(ctx, http.MethodDelete, "/api/v2/chats/"+url.PathEscape(chatID), nil, nil)
 }

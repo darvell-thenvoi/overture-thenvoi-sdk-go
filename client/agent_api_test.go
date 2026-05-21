@@ -201,13 +201,13 @@ func TestClientSideValidation(t *testing.T) {
 		t.Fatalf("network should not be called for invalid input")
 		return nil, nil
 	})}))
-	if _, err := sdk.SendChatMessage(context.Background(), "chat_1", client.SendChatMessageInput{Content: "hello", Mentions: []client.Mention{{}}}); err == nil || err.Error() != "thenvoi: mention id is required" {
+	if _, err := sdk.SendChatMessage(context.Background(), "chat_1", client.SendChatMessageInput{Content: "hello", Mentions: []client.Mention{{}}}); err == nil || err.Error() != "band: mention id is required" {
 		t.Fatalf("mention validation err=%v", err)
 	}
-	if _, err := sdk.RemoveContact(context.Background(), client.RemoveContactInput{Handle: stringPtr("")}); err == nil || err.Error() != "thenvoi: handle or contact id is required" {
+	if _, err := sdk.RemoveContact(context.Background(), client.RemoveContactInput{Handle: stringPtr("")}); err == nil || err.Error() != "band: handle or contact id is required" {
 		t.Fatalf("remove validation err=%v", err)
 	}
-	if _, err := sdk.RespondContactRequest(context.Background(), client.RespondContactRequestInput{Action: "approve"}); err == nil || err.Error() != "thenvoi: handle or request id is required" {
+	if _, err := sdk.RespondContactRequest(context.Background(), client.RespondContactRequestInput{Action: "approve"}); err == nil || err.Error() != "band: handle or request id is required" {
 		t.Fatalf("respond validation err=%v", err)
 	}
 }

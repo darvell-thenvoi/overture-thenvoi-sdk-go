@@ -29,7 +29,7 @@ type GenericAdapter struct {
 
 func NewGenericAdapter(handler GenericAdapterHandler) (*GenericAdapter, error) {
 	if handler == nil {
-		return nil, errors.New("thenvoi: generic adapter handler is required")
+		return nil, errors.New("band: generic adapter handler is required")
 	}
 	return &GenericAdapter{handler: handler}, nil
 }
