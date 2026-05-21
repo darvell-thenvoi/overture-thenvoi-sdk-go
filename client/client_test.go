@@ -54,7 +54,7 @@ func TestDoDecodesJSONSuccessAndSetsHeaders(t *testing.T) {
 			t.Fatalf("agent_id = %s", decoded.AgentID)
 		}
 
-		return jsonResponse(http.StatusOK, `{"name":"thenvoi"}`), nil
+		return jsonResponse(http.StatusOK, `{"name":"band"}`), nil
 	})
 
 	sdk := client.New(
@@ -75,7 +75,7 @@ func TestDoDecodesJSONSuccessAndSetsHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Do returned error: %v", err)
 	}
-	if got.Name != "thenvoi" {
+	if got.Name != "band" {
 		t.Fatalf("name = %s", got.Name)
 	}
 }
@@ -117,7 +117,7 @@ func TestDoUsesDefaultBaseURLAndUserAgent(t *testing.T) {
 		if r.URL.String() != client.DefaultBaseURL+"/api/v1/check" {
 			t.Fatalf("url = %s", r.URL.String())
 		}
-		if got := r.Header.Get("User-Agent"); got != "overture-thenvoi-sdk-go/"+client.Version {
+		if got := r.Header.Get("User-Agent"); got != "band-sdk-go/"+client.Version {
 			t.Fatalf("user-agent = %s", got)
 		}
 		return jsonResponse(http.StatusOK, `{"ok":true}`), nil

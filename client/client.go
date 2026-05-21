@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// Client is the REST client for the Band/Thenvoi platform API.
+// Client is the REST client for the Band platform API.
 type Client struct {
 	config Config
 }
@@ -21,7 +21,7 @@ type Client struct {
 func New(opts ...Option) *Client {
 	config := Config{
 		BaseURL:   DefaultBaseURL,
-		UserAgent: "overture-thenvoi-sdk-go/" + Version,
+		UserAgent: "band-sdk-go/" + Version,
 		Timeout:   defaultTimeout,
 	}
 
@@ -46,7 +46,7 @@ func (client *Client) Do(ctx context.Context, method string, path string, body a
 
 func (client *Client) do(ctx context.Context, method string, path string, body any, out any) (int, error) {
 	if client.config.ApiKey == "" {
-		return 0, errors.New("thenvoi: api key is required")
+		return 0, errors.New("band: api key is required")
 	}
 
 	requestURL, err := client.requestURL(path)
@@ -98,10 +98,10 @@ func (client *Client) requestURL(path string) (string, error) {
 	baseURL := strings.TrimSuffix(client.config.BaseURL, "/")
 	parsedBaseURL, err := url.Parse(baseURL)
 	if err != nil {
-		return "", fmt.Errorf("thenvoi: invalid base url: %w", err)
+		return "", fmt.Errorf("band: invalid base url: %w", err)
 	}
 	if parsedBaseURL.Scheme == "" || parsedBaseURL.Host == "" {
-		return "", fmt.Errorf("thenvoi: invalid base url %q", client.config.BaseURL)
+		return "", fmt.Errorf("band: invalid base url %q", client.config.BaseURL)
 	}
 
 	if path == "" {

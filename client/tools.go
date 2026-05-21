@@ -49,7 +49,7 @@ type AssignedToolDetail struct {
 	AssignedAt  time.Time      `json:"assigned_at"`
 }
 
-// ConnectionConfig describes how Thenvoi connects to a tool endpoint.
+// ConnectionConfig describes how Band connects to a tool endpoint.
 type ConnectionConfig struct {
 	BaseURL   string     `json:"base_url"`
 	Method    string     `json:"method"`
@@ -178,7 +178,7 @@ func (client *Client) CreateTool(ctx context.Context, input CreateToolInput) (*T
 // GetTool fetches a tool by id.
 func (client *Client) GetTool(ctx context.Context, toolID string) (*Tool, error) {
 	if toolID == "" {
-		return nil, errors.New("thenvoi: tool id is required")
+		return nil, errors.New("band: tool id is required")
 	}
 	var out struct {
 		Data Tool `json:"data"`
@@ -192,7 +192,7 @@ func (client *Client) GetTool(ctx context.Context, toolID string) (*Tool, error)
 // UpdateTool updates a tool by id.
 func (client *Client) UpdateTool(ctx context.Context, toolID string, input UpdateToolInput) (*Tool, error) {
 	if toolID == "" {
-		return nil, errors.New("thenvoi: tool id is required")
+		return nil, errors.New("band: tool id is required")
 	}
 	if input.ConnectionConfig != nil {
 		if err := validateConnectionConfig(*input.ConnectionConfig); err != nil {
@@ -211,7 +211,7 @@ func (client *Client) UpdateTool(ctx context.Context, toolID string, input Updat
 // DeleteTool deletes a tool by id.
 func (client *Client) DeleteTool(ctx context.Context, toolID string) error {
 	if toolID == "" {
-		return errors.New("thenvoi: tool id is required")
+		return errors.New("band: tool id is required")
 	}
 	return client.Do(ctx, http.MethodDelete, "/api/v2/tools/"+url.PathEscape(toolID), nil, nil)
 }
@@ -219,7 +219,7 @@ func (client *Client) DeleteTool(ctx context.Context, toolID string) error {
 // AssignToolsToAgent assigns tools to an agent.
 func (client *Client) AssignToolsToAgent(ctx context.Context, agentID string, input AssignToolsInput) (*AssignToolsToAgentResponse, error) {
 	if agentID == "" {
-		return nil, errors.New("thenvoi: agent id is required")
+		return nil, errors.New("band: agent id is required")
 	}
 	if err := validateAssignToolsInput(input); err != nil {
 		return nil, err
@@ -237,7 +237,7 @@ func (client *Client) AssignToolsToAgent(ctx context.Context, agentID string, in
 // ListAgentTools lists tools assigned to an agent.
 func (client *Client) ListAgentTools(ctx context.Context, agentID string, input *ListAgentToolsInput) (*ListAgentToolsResponse, error) {
 	if agentID == "" {
-		return nil, errors.New("thenvoi: agent id is required")
+		return nil, errors.New("band: agent id is required")
 	}
 	values := url.Values{}
 	if input != nil {
@@ -254,10 +254,10 @@ func (client *Client) ListAgentTools(ctx context.Context, agentID string, input 
 // RemoveToolFromAgent removes a tool assignment from an agent.
 func (client *Client) RemoveToolFromAgent(ctx context.Context, agentID string, toolID string) error {
 	if agentID == "" {
-		return errors.New("thenvoi: agent id is required")
+		return errors.New("band: agent id is required")
 	}
 	if toolID == "" {
-		return errors.New("thenvoi: tool id is required")
+		return errors.New("band: tool id is required")
 	}
 	path := "/api/v2/agents/" + url.PathEscape(agentID) + "/tools/" + url.PathEscape(toolID)
 	return client.Do(ctx, http.MethodDelete, path, nil, nil)
@@ -293,7 +293,7 @@ func (client *Client) AssignToolsToMyself(ctx context.Context, input AssignTools
 // RemoveToolFromMyself removes a tool assignment from the current agent.
 func (client *Client) RemoveToolFromMyself(ctx context.Context, toolID string) error {
 	if toolID == "" {
-		return errors.New("thenvoi: tool id is required")
+		return errors.New("band: tool id is required")
 	}
 	return client.Do(ctx, http.MethodDelete, "/api/v2/agents/me/tools/"+url.PathEscape(toolID), nil, nil)
 }
@@ -309,32 +309,32 @@ func addToolPagination(values url.Values, page *int, perPage *int) {
 
 func validateCreateToolInput(input CreateToolInput) error {
 	if input.Name == "" {
-		return errors.New("thenvoi: tool name is required")
+		return errors.New("band: tool name is required")
 	}
 	if input.Description == "" {
-		return errors.New("thenvoi: tool description is required")
+		return errors.New("band: tool description is required")
 	}
 	if input.JSONSchema == nil {
-		return errors.New("thenvoi: tool json schema is required")
+		return errors.New("band: tool json schema is required")
 	}
 	if input.ConnectionConfig == nil {
-		return errors.New("thenvoi: tool connection config is required")
+		return errors.New("band: tool connection config is required")
 	}
 	return validateConnectionConfig(*input.ConnectionConfig)
 }
 
 func validateConnectionConfig(config ConnectionConfig) error {
 	if config.BaseURL == "" {
-		return errors.New("thenvoi: tool connection base url is required")
+		return errors.New("band: tool connection base url is required")
 	}
 	if config.Method == "" {
-		return errors.New("thenvoi: tool connection method is required")
+		return errors.New("band: tool connection method is required")
 	}
 	if config.Path == "" {
-		return errors.New("thenvoi: tool connection path is required")
+		return errors.New("band: tool connection path is required")
 	}
 	if config.ParamType == "" {
-		return errors.New("thenvoi: tool connection param type is required")
+		return errors.New("band: tool connection param type is required")
 	}
 	return validateAuthConfig(config.Auth)
 }
@@ -342,20 +342,20 @@ func validateConnectionConfig(config ConnectionConfig) error {
 func validateAuthConfig(config AuthConfig) error {
 	switch config.Type {
 	case "":
-		return errors.New("thenvoi: tool auth type is required")
+		return errors.New("band: tool auth type is required")
 	case "api_key":
 		if config.Location == nil || *config.Location == "" {
-			return errors.New("thenvoi: tool auth location is required")
+			return errors.New("band: tool auth location is required")
 		}
 		if config.HeaderName == nil || *config.HeaderName == "" {
-			return errors.New("thenvoi: tool auth header name is required")
+			return errors.New("band: tool auth header name is required")
 		}
 		if config.KeyName == nil || *config.KeyName == "" {
-			return errors.New("thenvoi: tool auth key name is required")
+			return errors.New("band: tool auth key name is required")
 		}
 	case "bearer", "basic", "vercel_bypass":
 		if config.KeyName == nil || *config.KeyName == "" {
-			return errors.New("thenvoi: tool auth key name is required")
+			return errors.New("band: tool auth key name is required")
 		}
 	}
 	return nil
@@ -363,11 +363,11 @@ func validateAuthConfig(config AuthConfig) error {
 
 func validateAssignToolsInput(input AssignToolsInput) error {
 	if len(input.ToolIDs) == 0 {
-		return errors.New("thenvoi: tool ids are required")
+		return errors.New("band: tool ids are required")
 	}
 	for _, toolID := range input.ToolIDs {
 		if toolID == "" {
-			return errors.New("thenvoi: tool id is required")
+			return errors.New("band: tool id is required")
 		}
 	}
 	return nil

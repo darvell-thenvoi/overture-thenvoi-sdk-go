@@ -76,19 +76,19 @@ func (client *Client) ListMemories(ctx context.Context, input *ListMemoriesInput
 // CreateMemory stores a memory entry.
 func (client *Client) CreateMemory(ctx context.Context, input CreateMemoryInput) (*Memory, error) {
 	if input.Content == "" {
-		return nil, errors.New("thenvoi: content is required")
+		return nil, errors.New("band: content is required")
 	}
 	if input.Segment == "" {
-		return nil, errors.New("thenvoi: segment is required")
+		return nil, errors.New("band: segment is required")
 	}
 	if input.System == "" {
-		return nil, errors.New("thenvoi: system is required")
+		return nil, errors.New("band: system is required")
 	}
 	if input.Thought == "" {
-		return nil, errors.New("thenvoi: thought is required")
+		return nil, errors.New("band: thought is required")
 	}
 	if input.Type == "" {
-		return nil, errors.New("thenvoi: type is required")
+		return nil, errors.New("band: type is required")
 	}
 	var out struct {
 		Data Memory `json:"data"`
@@ -102,7 +102,7 @@ func (client *Client) CreateMemory(ctx context.Context, input CreateMemoryInput)
 // GetMemory fetches a memory by id.
 func (client *Client) GetMemory(ctx context.Context, memoryID string) (*Memory, error) {
 	if memoryID == "" {
-		return nil, errors.New("thenvoi: memory id is required")
+		return nil, errors.New("band: memory id is required")
 	}
 	var out struct {
 		Data Memory `json:"data"`
@@ -125,7 +125,7 @@ func (client *Client) ArchiveMemory(ctx context.Context, memoryID string) (*Memo
 
 func (client *Client) memoryOperation(ctx context.Context, memoryID string, operation string) (*Memory, error) {
 	if memoryID == "" {
-		return nil, errors.New("thenvoi: memory id is required")
+		return nil, errors.New("band: memory id is required")
 	}
 	var out struct {
 		Data *Memory `json:"data,omitempty"`

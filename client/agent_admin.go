@@ -99,13 +99,13 @@ func (client *Client) ListAgents(ctx context.Context, input *ListAgentsInput) (*
 // RegisterExternalAgent registers an external API v2 agent.
 func (client *Client) RegisterExternalAgent(ctx context.Context, input RegisterExternalAgentInput) (*RegisterExternalAgentResponse, error) {
 	if input.Name == "" {
-		return nil, errors.New("thenvoi: name is required")
+		return nil, errors.New("band: name is required")
 	}
 	if input.Description == "" {
-		return nil, errors.New("thenvoi: description is required")
+		return nil, errors.New("band: description is required")
 	}
 	if input.ModelType == "" {
-		return nil, errors.New("thenvoi: model type is required")
+		return nil, errors.New("band: model type is required")
 	}
 
 	var out struct {
@@ -120,13 +120,13 @@ func (client *Client) RegisterExternalAgent(ctx context.Context, input RegisterE
 // CreatePlatformAgent creates an API v2 platform agent.
 func (client *Client) CreatePlatformAgent(ctx context.Context, input CreatePlatformAgentInput) (*Agent, error) {
 	if input.Name == "" {
-		return nil, errors.New("thenvoi: name is required")
+		return nil, errors.New("band: name is required")
 	}
 	if input.Description == "" {
-		return nil, errors.New("thenvoi: description is required")
+		return nil, errors.New("band: description is required")
 	}
 	if input.ModelType == "" {
-		return nil, errors.New("thenvoi: model type is required")
+		return nil, errors.New("band: model type is required")
 	}
 
 	var out struct {
@@ -141,7 +141,7 @@ func (client *Client) CreatePlatformAgent(ctx context.Context, input CreatePlatf
 // UpdateAgent updates an API v2 agent by id.
 func (client *Client) UpdateAgent(ctx context.Context, agentID string, input UpdateAgentInput) (*Agent, error) {
 	if agentID == "" {
-		return nil, errors.New("thenvoi: agent id is required")
+		return nil, errors.New("band: agent id is required")
 	}
 
 	var out struct {
@@ -156,7 +156,7 @@ func (client *Client) UpdateAgent(ctx context.Context, agentID string, input Upd
 // DeleteAgent deletes an API v2 agent by id.
 func (client *Client) DeleteAgent(ctx context.Context, agentID string) error {
 	if agentID == "" {
-		return errors.New("thenvoi: agent id is required")
+		return errors.New("band: agent id is required")
 	}
 	return client.Do(ctx, http.MethodDelete, "/api/v2/agents/"+url.PathEscape(agentID), nil, nil)
 }
@@ -164,10 +164,10 @@ func (client *Client) DeleteAgent(ctx context.Context, agentID string) error {
 // ExecuteAgent starts an API v2 agent execution.
 func (client *Client) ExecuteAgent(ctx context.Context, agentID string, input ExecuteAgentInput) (*ExecutionResponse, error) {
 	if agentID == "" {
-		return nil, errors.New("thenvoi: agent id is required")
+		return nil, errors.New("band: agent id is required")
 	}
 	if input.Request == "" {
-		return nil, errors.New("thenvoi: request is required")
+		return nil, errors.New("band: request is required")
 	}
 
 	var out struct {

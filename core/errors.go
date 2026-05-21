@@ -1,24 +1,24 @@
 package core
 
-type ThenvoiSdkError struct {
+type BandSdkError struct {
 	name    string
 	message string
 	cause   error
 }
 
-func NewThenvoiSdkError(message string, cause error) *ThenvoiSdkError {
-	return &ThenvoiSdkError{name: "ThenvoiSdkError", message: message, cause: cause}
+func NewBandSdkError(message string, cause error) *BandSdkError {
+	return &BandSdkError{name: "BandSdkError", message: message, cause: cause}
 }
 
-func (err *ThenvoiSdkError) Error() string {
+func (err *BandSdkError) Error() string {
 	return err.message
 }
 
-func (err *ThenvoiSdkError) Name() string {
+func (err *BandSdkError) Name() string {
 	return err.name
 }
 
-func (err *ThenvoiSdkError) Unwrap() error {
+func (err *BandSdkError) Unwrap() error {
 	return err.cause
 }
 
@@ -27,11 +27,11 @@ type UnsupportedFeatureError struct {
 }
 
 func NewUnsupportedFeatureError(message string) *UnsupportedFeatureError {
-	return &UnsupportedFeatureError{ThenvoiSdkError: &ThenvoiSdkError{name: "UnsupportedFeatureError", message: message}}
+	return &UnsupportedFeatureError{ThenvoiSdkError: &BandSdkError{name: "UnsupportedFeatureError", message: message}}
 }
 
 func (err *UnsupportedFeatureError) As(target any) bool {
-	return asThenvoiSdkError(target, err.ThenvoiSdkError)
+	return asBandSdkError(target, err.ThenvoiSdkError)
 }
 
 type ValidationError struct {
@@ -39,11 +39,11 @@ type ValidationError struct {
 }
 
 func NewValidationError(message string, cause error) *ValidationError {
-	return &ValidationError{ThenvoiSdkError: &ThenvoiSdkError{name: "ValidationError", message: message, cause: cause}}
+	return &ValidationError{ThenvoiSdkError: &BandSdkError{name: "ValidationError", message: message, cause: cause}}
 }
 
 func (err *ValidationError) As(target any) bool {
-	return asThenvoiSdkError(target, err.ThenvoiSdkError)
+	return asBandSdkError(target, err.ThenvoiSdkError)
 }
 
 type TransportError struct {
@@ -51,11 +51,11 @@ type TransportError struct {
 }
 
 func NewTransportError(message string, cause error) *TransportError {
-	return &TransportError{ThenvoiSdkError: &ThenvoiSdkError{name: "TransportError", message: message, cause: cause}}
+	return &TransportError{ThenvoiSdkError: &BandSdkError{name: "TransportError", message: message, cause: cause}}
 }
 
 func (err *TransportError) As(target any) bool {
-	return asThenvoiSdkError(target, err.ThenvoiSdkError)
+	return asBandSdkError(target, err.ThenvoiSdkError)
 }
 
 type RuntimeStateError struct {
@@ -63,18 +63,24 @@ type RuntimeStateError struct {
 }
 
 func NewRuntimeStateError(message string) *RuntimeStateError {
-	return &RuntimeStateError{ThenvoiSdkError: &ThenvoiSdkError{name: "RuntimeStateError", message: message}}
+	return &RuntimeStateError{ThenvoiSdkError: &BandSdkError{name: "RuntimeStateError", message: message}}
 }
 
 func (err *RuntimeStateError) As(target any) bool {
-	return asThenvoiSdkError(target, err.ThenvoiSdkError)
+	return asBandSdkError(target, err.ThenvoiSdkError)
 }
 
-func asThenvoiSdkError(target any, err *ThenvoiSdkError) bool {
-	targetErr, ok := target.(**ThenvoiSdkError)
+func asBandSdkError(target any, err *BandSdkError) bool {
+	targetErr, ok := target.(**BandSdkError)
 	if !ok {
 		return false
 	}
 	*targetErr = err
 	return true
+}
+
+type ThenvoiSdkError = BandSdkError
+
+func NewThenvoiSdkError(message string, cause error) *ThenvoiSdkError {
+	return &BandSdkError{name: "ThenvoiSdkError", message: message, cause: cause}
 }

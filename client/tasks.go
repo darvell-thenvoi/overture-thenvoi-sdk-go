@@ -129,7 +129,7 @@ type CreateUserTaskInput struct {
 // ListMyTasksInChat lists the current agent's tasks in a chat.
 func (client *Client) ListMyTasksInChat(ctx context.Context, chatID string, input *ListMyTasksInChatInput) (*ListMyTasksInChatResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	values := url.Values{}
 	if input != nil {
@@ -153,10 +153,10 @@ func (client *Client) ListMyTasksInChat(ctx context.Context, chatID string, inpu
 // CreateTaskInChat creates a task in a chat for the current agent.
 func (client *Client) CreateTaskInChat(ctx context.Context, chatID string, input CreateTaskInChatInput) (*Task, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if input.Description == "" {
-		return nil, errors.New("thenvoi: description is required")
+		return nil, errors.New("band: description is required")
 	}
 
 	var out struct {
@@ -172,14 +172,14 @@ func (client *Client) CreateTaskInChat(ctx context.Context, chatID string, input
 // CreateBulkTasksInChat creates multiple tasks in a chat for the current agent.
 func (client *Client) CreateBulkTasksInChat(ctx context.Context, chatID string, input CreateBulkTasksInChatInput) (*CreateBulkTasksInChatResponse, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if len(input.Tasks) == 0 {
-		return nil, errors.New("thenvoi: at least one task is required")
+		return nil, errors.New("band: at least one task is required")
 	}
 	for _, task := range input.Tasks {
 		if task.Description == "" {
-			return nil, errors.New("thenvoi: task description is required")
+			return nil, errors.New("band: task description is required")
 		}
 	}
 
@@ -196,10 +196,10 @@ func (client *Client) CreateBulkTasksInChat(ctx context.Context, chatID string, 
 // GetTask fetches a chat-scoped task for the current agent.
 func (client *Client) GetTask(ctx context.Context, chatID string, taskID string) (*Task, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if taskID == "" {
-		return nil, errors.New("thenvoi: task id is required")
+		return nil, errors.New("band: task id is required")
 	}
 
 	var out struct {
@@ -215,10 +215,10 @@ func (client *Client) GetTask(ctx context.Context, chatID string, taskID string)
 // UpdateTaskInChat updates a chat-scoped task for the current agent.
 func (client *Client) UpdateTaskInChat(ctx context.Context, chatID string, taskID string, input UpdateTaskInChatInput) (*Task, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if taskID == "" {
-		return nil, errors.New("thenvoi: task id is required")
+		return nil, errors.New("band: task id is required")
 	}
 
 	var out struct {
@@ -233,10 +233,10 @@ func (client *Client) UpdateTaskInChat(ctx context.Context, chatID string, taskI
 // DeleteTaskInChat deletes a chat-scoped task for the current agent.
 func (client *Client) DeleteTaskInChat(ctx context.Context, chatID string, taskID string) error {
 	if chatID == "" {
-		return errors.New("thenvoi: chat id is required")
+		return errors.New("band: chat id is required")
 	}
 	if taskID == "" {
-		return errors.New("thenvoi: task id is required")
+		return errors.New("band: task id is required")
 	}
 	return client.Do(ctx, http.MethodDelete, taskInChatPath(chatID, taskID), nil, nil)
 }
@@ -261,7 +261,7 @@ func (client *Client) ListMyUserTasks(ctx context.Context, input *ListMyUserTask
 // CreateUserTask creates a task for the current user.
 func (client *Client) CreateUserTask(ctx context.Context, input CreateUserTaskInput) (*Task, error) {
 	if input.Description == "" {
-		return nil, errors.New("thenvoi: description is required")
+		return nil, errors.New("band: description is required")
 	}
 
 	var out struct {
@@ -276,7 +276,7 @@ func (client *Client) CreateUserTask(ctx context.Context, input CreateUserTaskIn
 // GetUserTask fetches a task for the current user.
 func (client *Client) GetUserTask(ctx context.Context, taskID string) (*Task, error) {
 	if taskID == "" {
-		return nil, errors.New("thenvoi: task id is required")
+		return nil, errors.New("band: task id is required")
 	}
 
 	var out struct {
@@ -291,7 +291,7 @@ func (client *Client) GetUserTask(ctx context.Context, taskID string) (*Task, er
 // DeleteUserTask deletes a task for the current user.
 func (client *Client) DeleteUserTask(ctx context.Context, taskID string) error {
 	if taskID == "" {
-		return errors.New("thenvoi: task id is required")
+		return errors.New("band: task id is required")
 	}
 	return client.Do(ctx, http.MethodDelete, userTaskPath(taskID), nil, nil)
 }

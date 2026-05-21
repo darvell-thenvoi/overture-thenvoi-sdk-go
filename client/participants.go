@@ -21,7 +21,7 @@ type ListChatParticipantsResponse struct {
 // ListChatParticipants lists participants in a chat room.
 func (client *Client) ListChatParticipants(ctx context.Context, chatID string) ([]ChatParticipant, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	var out ListChatParticipantsResponse
 	if err := client.Do(ctx, http.MethodGet, "/api/v1/agent/chats/"+url.PathEscape(chatID)+"/participants", nil, &out); err != nil {
@@ -33,10 +33,10 @@ func (client *Client) ListChatParticipants(ctx context.Context, chatID string) (
 // AddChatParticipant adds a participant to a chat room.
 func (client *Client) AddChatParticipant(ctx context.Context, chatID string, input AddChatParticipantInput) (*ChatParticipant, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if input.ParticipantID == "" {
-		return nil, errors.New("thenvoi: participant id is required")
+		return nil, errors.New("band: participant id is required")
 	}
 	var out struct {
 		Data ChatParticipant `json:"data"`
@@ -51,10 +51,10 @@ func (client *Client) AddChatParticipant(ctx context.Context, chatID string, inp
 // RemoveChatParticipant removes a participant from a chat room.
 func (client *Client) RemoveChatParticipant(ctx context.Context, chatID string, participantID string) (*ChatParticipant, error) {
 	if chatID == "" {
-		return nil, errors.New("thenvoi: chat id is required")
+		return nil, errors.New("band: chat id is required")
 	}
 	if participantID == "" {
-		return nil, errors.New("thenvoi: participant id is required")
+		return nil, errors.New("band: participant id is required")
 	}
 	var out struct {
 		Data ChatParticipant `json:"data"`

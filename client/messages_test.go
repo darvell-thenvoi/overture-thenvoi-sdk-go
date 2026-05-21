@@ -95,7 +95,7 @@ func TestSendChatMessage(t *testing.T) {
 			chatID: "chat_123",
 			input:  client.SendChatMessageInput{Content: "hello"},
 			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
-				if out != nil || err == nil || err.Error() != "thenvoi: at least one mention is required" {
+				if out != nil || err == nil || err.Error() != "band: at least one mention is required" {
 					t.Fatalf("out=%#v err=%v", out, err)
 				}
 			},
@@ -106,7 +106,7 @@ func TestSendChatMessage(t *testing.T) {
 			chatID: "chat_123",
 			input:  client.SendChatMessageInput{Mentions: []client.Mention{{ID: "user_1"}}},
 			assertResult: func(t *testing.T, out *client.MessageSentResponse, err error) {
-				if out != nil || err == nil || err.Error() != "thenvoi: content is required" {
+				if out != nil || err == nil || err.Error() != "band: content is required" {
 					t.Fatalf("out=%#v err=%v", out, err)
 				}
 			},
@@ -227,10 +227,10 @@ func TestDeleteChatMessageV2ValidationAndAPIErrors(t *testing.T) {
 	sdk := client.New(client.WithApiKey("test-key"), client.WithBaseURL("https://api.test"), client.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		return jsonResponse(http.StatusUnauthorized, `{"error":{"code":"unauthorized","message":"bad key"}}`), nil
 	})}))
-	if err := sdk.DeleteChatMessage(context.Background(), "", "msg_1"); err == nil || err.Error() != "thenvoi: chat id is required" {
+	if err := sdk.DeleteChatMessage(context.Background(), "", "msg_1"); err == nil || err.Error() != "band: chat id is required" {
 		t.Fatalf("chat validation err=%v", err)
 	}
-	if err := sdk.DeleteChatMessage(context.Background(), "chat_1", ""); err == nil || err.Error() != "thenvoi: message id is required" {
+	if err := sdk.DeleteChatMessage(context.Background(), "chat_1", ""); err == nil || err.Error() != "band: message id is required" {
 		t.Fatalf("message validation err=%v", err)
 	}
 	if err := sdk.DeleteChatMessage(context.Background(), "chat_1", "msg_1"); !errors.Is(err, client.ErrUnauthorized) {

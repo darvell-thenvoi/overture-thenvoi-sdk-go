@@ -25,9 +25,15 @@ func TestTypedErrorsExposeNamesAndCauses(t *testing.T) {
 		t.Fatalf("errors.Is did not match wrapped cause")
 	}
 
-	var sdkErr *core.ThenvoiSdkError
+	var sdkErr *core.BandSdkError
 	if !errors.As(err, &sdkErr) {
-		t.Fatalf("errors.As did not match ThenvoiSdkError")
+		t.Fatalf("errors.As did not match BandSdkError")
+	}
+	if err.ThenvoiSdkError == nil {
+		t.Fatalf("legacy embedded ThenvoiSdkError field was not preserved")
+	}
+	if got := core.NewThenvoiSdkError("legacy", nil).Name(); got != "ThenvoiSdkError" {
+		t.Fatalf("legacy sdk error name = %q", got)
 	}
 
 	if got := core.NewUnsupportedFeatureError("missing").Name(); got != "UnsupportedFeatureError" {

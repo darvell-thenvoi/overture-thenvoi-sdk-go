@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	ErrUnauthorized = errors.New("thenvoi: unauthorized")
-	ErrForbidden    = errors.New("thenvoi: forbidden")
-	ErrNotFound     = errors.New("thenvoi: not found")
-	ErrRateLimited  = errors.New("thenvoi: rate limited")
-	ErrServer       = errors.New("thenvoi: server error")
+	ErrUnauthorized = errors.New("band: unauthorized")
+	ErrForbidden    = errors.New("band: forbidden")
+	ErrNotFound     = errors.New("band: not found")
+	ErrRateLimited  = errors.New("band: rate limited")
+	ErrServer       = errors.New("band: server error")
 )
 
 // ApiError describes a non-2xx API response.

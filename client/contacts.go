@@ -148,7 +148,7 @@ func (client *Client) ListContacts(ctx context.Context, input *ListContactsInput
 // AddContact sends a contact request by handle.
 func (client *Client) AddContact(ctx context.Context, input AddContactInput) (*ContactOperationResult, error) {
 	if input.Handle == "" {
-		return nil, errors.New("thenvoi: handle is required")
+		return nil, errors.New("band: handle is required")
 	}
 	var out ContactOperationResponse
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/add", input, &out); err != nil {
@@ -160,7 +160,7 @@ func (client *Client) AddContact(ctx context.Context, input AddContactInput) (*C
 // RemoveContact removes a contact by handle or contact id.
 func (client *Client) RemoveContact(ctx context.Context, input RemoveContactInput) (*ContactOperationResult, error) {
 	if (input.Handle == nil || *input.Handle == "") && (input.ContactID == nil || *input.ContactID == "") {
-		return nil, errors.New("thenvoi: handle or contact id is required")
+		return nil, errors.New("band: handle or contact id is required")
 	}
 	var out ContactOperationResponse
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/remove", input, &out); err != nil {
@@ -188,10 +188,10 @@ func (client *Client) ListContactRequests(ctx context.Context, input *ListContac
 // RespondContactRequest approves, rejects, or cancels a contact request.
 func (client *Client) RespondContactRequest(ctx context.Context, input RespondContactRequestInput) (*ContactOperationResult, error) {
 	if input.Action == "" {
-		return nil, errors.New("thenvoi: action is required")
+		return nil, errors.New("band: action is required")
 	}
 	if (input.Handle == nil || *input.Handle == "") && (input.RequestID == nil || *input.RequestID == "") {
-		return nil, errors.New("thenvoi: handle or request id is required")
+		return nil, errors.New("band: handle or request id is required")
 	}
 	var out ContactOperationResponse
 	if err := client.Do(ctx, http.MethodPost, "/api/v1/agent/contacts/requests/respond", input, &out); err != nil {
@@ -203,7 +203,7 @@ func (client *Client) RespondContactRequest(ctx context.Context, input RespondCo
 // GetContactDetails fetches API v2 contact details.
 func (client *Client) GetContactDetails(ctx context.Context, contactID string) (*ContactDetail, error) {
 	if contactID == "" {
-		return nil, errors.New("thenvoi: contact id is required")
+		return nil, errors.New("band: contact id is required")
 	}
 
 	var out struct {
@@ -228,10 +228,10 @@ func (client *Client) SearchContacts(ctx context.Context, input SearchContactsIn
 // CheckContactAvailability checks availability for up to 50 API v2 contacts.
 func (client *Client) CheckContactAvailability(ctx context.Context, input CheckContactAvailabilityInput) (*CheckContactAvailabilityResponse, error) {
 	if len(input.ContactIDs) == 0 {
-		return nil, errors.New("thenvoi: at least one contact id is required")
+		return nil, errors.New("band: at least one contact id is required")
 	}
 	if len(input.ContactIDs) > 50 {
-		return nil, errors.New("thenvoi: at most 50 contact ids are allowed")
+		return nil, errors.New("band: at most 50 contact ids are allowed")
 	}
 
 	var out struct {

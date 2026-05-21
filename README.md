@@ -1,8 +1,10 @@
-# overture-thenvoi-sdk-go
+# band-sdk-go
 
-Go SDK for Band/Thenvoi platform, planned and implemented end-to-end by [Overture](https://github.com/darvell-thenvoi/overture) agent swarms talking over Band rooms.
+Go SDK for the Band platform, planned and implemented end-to-end by [Overture](https://github.com/darvell-thenvoi/overture) agent swarms talking over Band rooms.
 
-This repository is the dogfood target for Overture: every change here was authored by an agent team coordinated through Band, with human approval gates in the Overture UI. The SDK mirrors the agent REST surface of the official TypeScript Thenvoi SDK generated from `@thenvoi/rest-client@0.0.113`.
+The Go module path intentionally remains `github.com/darvell-thenvoi/overture-thenvoi-sdk-go` for this compatibility release; only runtime defaults and public branding move to Band here.
+
+This repository is the dogfood target for Overture: every change here was authored by an agent team coordinated through Band, with human approval gates in the Overture UI. The SDK mirrors the agent REST surface of the Band TypeScript SDK generated from `@thenvoi/rest-client@0.0.113`.
 
 ## Status
 
@@ -21,7 +23,7 @@ import (
 )
 
 func main() {
-	sdk := client.New(client.WithApiKey("thenvoi_agent_api_key"))
+	sdk := client.New(client.WithApiKey("band_agent_api_key"))
 
 	agent, err := sdk.GetAgent(context.Background())
 	if err != nil {
@@ -31,7 +33,7 @@ func main() {
 }
 ```
 
-The default base URL is `https://app.thenvoi.com`. Requests send `X-API-Key`, `Accept: application/json`, and a default SDK `User-Agent`.
+The default base URL is `https://app.band.ai`. Requests send `X-API-Key`, `Accept: application/json`, and a default SDK `User-Agent`.
 
 ## Agent REST helpers
 

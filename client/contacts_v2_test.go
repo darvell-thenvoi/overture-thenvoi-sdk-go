@@ -74,17 +74,17 @@ func TestContactV2ValidationAndAPIErrors(t *testing.T) {
 		return jsonResponse(http.StatusForbidden, `{"error":{"code":"forbidden","message":"blocked"}}`), nil
 	})}))
 
-	if _, err := sdk.GetContactDetails(context.Background(), ""); err == nil || err.Error() != "thenvoi: contact id is required" {
+	if _, err := sdk.GetContactDetails(context.Background(), ""); err == nil || err.Error() != "band: contact id is required" {
 		t.Fatalf("GetContactDetails validation err=%v", err)
 	}
-	if _, err := sdk.CheckContactAvailability(context.Background(), client.CheckContactAvailabilityInput{}); err == nil || err.Error() != "thenvoi: at least one contact id is required" {
+	if _, err := sdk.CheckContactAvailability(context.Background(), client.CheckContactAvailabilityInput{}); err == nil || err.Error() != "band: at least one contact id is required" {
 		t.Fatalf("CheckContactAvailability validation err=%v", err)
 	}
 	contactIDs := make([]string, 51)
 	for i := range contactIDs {
 		contactIDs[i] = "contact"
 	}
-	if _, err := sdk.CheckContactAvailability(context.Background(), client.CheckContactAvailabilityInput{ContactIDs: contactIDs}); err == nil || err.Error() != "thenvoi: at most 50 contact ids are allowed" {
+	if _, err := sdk.CheckContactAvailability(context.Background(), client.CheckContactAvailabilityInput{ContactIDs: contactIDs}); err == nil || err.Error() != "band: at most 50 contact ids are allowed" {
 		t.Fatalf("CheckContactAvailability max err=%v", err)
 	}
 	if _, err := sdk.SearchContacts(context.Background(), client.SearchContactsInput{}); !errors.Is(err, client.ErrForbidden) {

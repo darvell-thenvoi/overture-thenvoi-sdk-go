@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	DefaultBaseURL = "https://app.thenvoi.com"
+	DefaultBaseURL = "https://app.band.ai"
 	defaultTimeout = 30 * time.Second
 )
 
